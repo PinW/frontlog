@@ -23,12 +23,7 @@ function addNewTask() {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-    <h1 class="text-4xl font-extrabold text-indigo-700 mb-6">
-      Frontlog: My Tasks
-    </h1>
-
     <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-md mb-8">
-      <h2 class="text-2xl font-semibold text-gray-800 mb-4">Add a New Task</h2>
       <div class="flex gap-2">
         <input
           type="text"
