@@ -2,16 +2,23 @@
 import { ref } from 'vue'
 import { useTasksStore } from './stores/tasks'
 import { storeToRefs } from 'pinia'
+import { useMagicKeys, whenever } from '@vueuse/core'
 
 // Initialize the store
 const tasksStore = useTasksStore()
-const { taskList, taskCount } = storeToRefs(tasksStore)
-const { addTask, removeTask, toggleTaskCompletion } = tasksStore
+const { taskList, taskCount, activeTaskId } = storeToRefs(tasksStore)
+const {
+  addTask,
+  removeTask,
+  toggleTaskCompletion,
+  selectNextTask,
+  selectPreviousTask
+} = tasksStore
 
 // Reactive variable for the new task input field
 const newTaskContent = ref('')
 
-// Function to add a task using the store's action
+// Function to add a new task
 function addNewTask() {
   if (newTaskContent.value.trim()) {
     tasksStore.addTask(newTaskContent.value)
@@ -19,10 +26,19 @@ function addNewTask() {
   }
 }
 
+const { arrowup, arrowdown } = useMagicKeys()
+
+whenever(arrowup, () => {
+  selectPreviousTask()
+})
+
+whenever(arrowdown, () => {
+  selectNextTask()
+})
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen p-4">
+  <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-100">
     <div class="w-full max-w-md mb-8">
       <div class="flex gap-2">
         <input
@@ -54,7 +70,7 @@ function addNewTask() {
                 type="checkbox"
                 :checked="task.completed"
                 @change="toggleTaskCompletion(task.id)"
-                class="h-5 w-5 rounded text-indigo-600 cursor-pointer"
+                class="h-5 w-5 text-indigo-600 cursor-pointer"
               />
               <span
                 class="text-gray-800 text-lg"
