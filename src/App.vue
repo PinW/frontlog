@@ -49,9 +49,12 @@ onMounted(() => {
     }
   })
 
-  // Focus the active task if it exists
-  if (activeTaskId.value && taskInputRefs.value[activeTaskId.value]) {
-    taskInputRefs.value[activeTaskId.value].focus()
+  // Pre-select the first task if available
+  if (taskList.value.length > 0) {
+    activeTaskId.value = taskList.value[0].id
+    if (taskInputRefs.value[activeTaskId.value]) {
+      taskInputRefs.value[activeTaskId.value].focus()
+    }
   }
 })
 
@@ -70,10 +73,42 @@ watch(activeTaskId, (newId) => {
 
 // Keyboard navigation for multi-line tasks
 useEventListener(window, 'keydown', (event) => {
-  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+  // Navigation keys
+  const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+  if (event.key === 'Escape') {
+    // Blur the active task if any
+    if (activeTaskId.value) {
+      const el = taskInputRefs.value[activeTaskId.value];
+      if (el) {
+        el.blur();
+      }
+      activeTaskId.value = null;
+    }
+    return;
+  }
+  if (!navKeys.includes(event.key)) return;
+
+  // If no active task, select first/last depending on key
+  if (!activeTaskId.value) {
+    if (event.key === 'ArrowUp' || event.key === 'ArrowLeft') {
+      if (taskList.value.length > 0) {
+        activeTaskId.value = taskList.value[taskList.value.length - 1].id;
+        if (taskInputRefs.value[activeTaskId.value]) {
+          taskInputRefs.value[activeTaskId.value].focus();
+        }
+      }
+    } else if (event.key === 'ArrowDown' || event.key === 'ArrowRight') {
+      if (taskList.value.length > 0) {
+        activeTaskId.value = taskList.value[0].id;
+        if (taskInputRefs.value[activeTaskId.value]) {
+          taskInputRefs.value[activeTaskId.value].focus();
+        }
+      }
+    }
     return;
   }
 
+  // Existing up/down navigation logic
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return;
 
@@ -86,12 +121,11 @@ useEventListener(window, 'keydown', (event) => {
 
   if (!cursorRect) return;
 
-  // Check if the cursor is on the first or last line of the text block
   if (event.key === 'ArrowDown' && cursorRect.bottom >= elementRect.bottom - 5) {
-    event.preventDefault(); // Prevent default multi-line navigation
+    event.preventDefault();
     selectNextTask();
   } else if (event.key === 'ArrowUp' && cursorRect.top <= elementRect.top + 5) {
-    event.preventDefault(); // Prevent default multi-line navigation
+    event.preventDefault();
     selectPreviousTask();
   }
 });
@@ -119,7 +153,7 @@ useEventListener(window, 'keydown', (event) => {
             :contenteditable="true"
             @input="onTaskInput(task, $event)"
             @focus="activeTaskId = task.id"
-            @blur="onTaskInput(task, $event)"
+            @blur="(event) => { onTaskInput(task, event); activeTaskId = null }"
             class="w-full bg-transparent text-lg resize-none overflow-hidden editable"
             :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
           >
