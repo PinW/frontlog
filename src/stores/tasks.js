@@ -76,6 +76,17 @@ export const useTasksStore = defineStore('tasks', () => {
     activeTaskId.value = tasks.value[previousIndex].id
   }
 
+  /**
+   * Updates the text of a specific task.
+   * @param { {id: string, newText: string} } payload
+   */
+  function updateTaskText({ id, newText }) {
+    const task = tasks.value.find(task => task.id === id)
+    if (task) {
+      task.text = newText
+    }
+  }
+
   // --- RETURN ---
   return {
     tasks,
@@ -88,6 +99,7 @@ export const useTasksStore = defineStore('tasks', () => {
     clearAllTasks,
     selectNextTask,
     selectPreviousTask,
+    updateTaskText,
   }
 
 }, {

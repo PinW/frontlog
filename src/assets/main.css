@@ -1,1 +1,46 @@
 @import "tailwindcss";
+
+/*
+ * 1. Define your default (light mode) variables in :root.
+ * This is the standard CSS way.
+*/
+:root {
+  --color-background: theme('colors.slate.100');
+  --color-foreground: theme('colors.slate.800');
+  --color-card: theme('colors.white');
+  --color-primary: theme('colors.indigo.600');
+  --color-primary-foreground: theme('colors.white');
+  --color-border: theme('colors.slate.300');
+  --color-highlight: theme('colors.amber.100');
+  --color-highlight-border: theme('colors.amber.200');
+}
+
+/*
+ * 2. Redefine the variables for dark mode using a .dark selector.
+*/
+.dark {
+  --color-background: oklch(0.15 0.03 250);
+  --color-foreground: oklch(0.95 0.02 250);
+  --color-card: oklch(0.15 0.03 250);
+  --color-primary: oklch(0.7 0.2 265);
+  --color-primary-foreground: oklch(0.15 0.03 250);
+  --color-border: oklch(0.3 0.04 250);
+  --color-highlight: oklch(0.4 0.11 100); /* muted yellow for dark mode */
+}
+
+
+/*
+ * 3. Define your theme tokens in @theme.
+ * This block ONLY tells Tailwind which utility classes to create.
+ * It must not contain any nested rules.
+*/
+@theme {
+  --color-background: var(--color-background);
+  --color-foreground: var(--color-foreground);
+  --color-card: var(--color-card);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-border: var(--color-border);
+  --color-highlight: var(--color-highlight);
+  --color-highlight-border: var(--color-highlight-border);
+}
