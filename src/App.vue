@@ -22,39 +22,39 @@ function addNewTask() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen bg-gray-100 p-4">
-    <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-md mb-8">
+  <div class="flex flex-col items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-md mb-8">
       <div class="flex gap-2">
         <input
           type="text"
           v-model="newTaskContent"
           @keyup.enter="addNewTask"
           placeholder="e.g., Learn Pinia"
-          class="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          class="flex-grow p-3 focus:outline-none"
         />
         <button
           @click="addNewTask"
-          class="px-5 py-3 bg-indigo-600 text-white rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-300"
+          class="px-5 py-3 text-indigo-600 transition-colors duration-300"
         >
           Add Task
         </button>
       </div>
     </div>
 
-    <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
+    <div class="w-full max-w-md">
       <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Tasks ({{ taskCount }})</h2>
       <ul v-if="taskCount > 0">
         <li
             v-for="task in taskList"
             :key="task.id"
-            class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-200"
+            class="flex items-center justify-between p-3"
           >
             <div class="flex items-center gap-3">
               <input
                 type="checkbox"
                 :checked="task.completed"
                 @change="toggleTaskCompletion(task.id)"
-                class="h-5 w-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                class="h-5 w-5 rounded text-indigo-600 cursor-pointer"
               />
               <span
                 class="text-gray-800 text-lg"
@@ -65,7 +65,7 @@ function addNewTask() {
             </div>
             <button
               @click="removeTask(task.id)"
-              class="px-3 py-1 bg-red-500 text-white rounded-md text-sm font-medium hover:bg-red-600 transition-colors duration-200"
+              class="px-3 py-1 text-red-500 text-sm font-medium hover:text-red-600 transition-colors duration-200"
             >
               Remove
             </button>
