@@ -7,6 +7,7 @@ export const useTasksStore = defineStore('tasks', () => {
   // --- STATE ---
   // State is now defined with ref()
   const tasks = ref([])
+  const activeTaskId = ref(null)
 
   // --- GETTERS ---
   const taskList = computed(() => tasks.value)
@@ -55,15 +56,38 @@ export const useTasksStore = defineStore('tasks', () => {
     tasks.value = []
   }
 
+  /**
+   * Selects the next task in the list.
+   */
+  function selectNextTask() {
+    if (tasks.value.length === 0) return
+    const currentIndex = tasks.value.findIndex(task => task.id === activeTaskId.value)
+    const nextIndex = (currentIndex + 1) % tasks.value.length
+    activeTaskId.value = tasks.value[nextIndex].id
+  }
+
+  /**
+   * Selects the previous task in the list.
+   */
+  function selectPreviousTask() {
+    if (tasks.value.length === 0) return
+    const currentIndex = tasks.value.findIndex(task => task.id === activeTaskId.value)
+    const previousIndex = (currentIndex - 1 + tasks.value.length) % tasks.value.length
+    activeTaskId.value = tasks.value[previousIndex].id
+  }
+
   // --- RETURN ---
   return {
     tasks,
+    activeTaskId,
     taskList,
     taskCount,
     addTask,
     removeTask,
     toggleTaskCompletion,
     clearAllTasks,
+    selectNextTask,
+    selectPreviousTask,
   }
 
 }, {
