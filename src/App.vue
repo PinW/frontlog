@@ -1,8 +1,9 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onBeforeUpdate } from 'vue'
 import { useTasksStore } from './stores/tasks'
 import { storeToRefs } from 'pinia'
-import { useMagicKeys, whenever } from '@vueuse/core'
+import { useEventListener } from '@vueuse/core'
+
 
 // Initialize the store
 const tasksStore = useTasksStore()
@@ -16,58 +17,95 @@ const {
   updateTaskText
 } = tasksStore
 
-// Reactive variable for the new task input field
+// State for the new task input
 const newTaskContent = ref('')
+
+// Refs for the editable div elements
+const taskInputRefs = ref({})
 
 // Function to add a new task
 function addNewTask() {
   if (newTaskContent.value.trim()) {
     tasksStore.addTask(newTaskContent.value)
-    newTaskContent.value = '' // Clear the input field
+    newTaskContent.value = ''
   }
 }
 
-// NEW: A place to store references to our task <input> DOM elements
-const taskInputRefs = ref({})
+// **LIFECYCLE HOOKS FOR REF MANAGEMENT**
 
-// Watch for changes to the activeTaskId
-watch(activeTaskId, (newId, oldId) => {
-  if (newId && taskInputRefs.value[newId]) {
-    // When the active ID changes, focus the corresponding input and position cursor at beginning
-    const input = taskInputRefs.value[newId]
-    input.focus()
-    input.setSelectionRange(0, 0) // Position cursor at the beginning
-  }
+// Before each update, clear the refs object.
+// This is crucial to prevent stale refs when the list changes.
+onBeforeUpdate(() => {
+  taskInputRefs.value = {}
 })
 
-// Existing hotkey listeners for up/down selection
-const { arrowup, arrowdown } = useMagicKeys()
-whenever(arrowup, selectPreviousTask)
-whenever(arrowdown, selectNextTask)
-
-// On initial load, focus the first task's input and position cursor at beginning
+// When the component mounts, populate the divs and focus the active task.
 onMounted(() => {
+  // Manually populate the text for all visible tasks
+  taskList.value.forEach(task => {
+    const el = taskInputRefs.value[task.id]
+    if (el) {
+      el.innerText = task.text
+    }
+  })
+
+  // Focus the active task if it exists
   if (activeTaskId.value && taskInputRefs.value[activeTaskId.value]) {
-    const input = taskInputRefs.value[activeTaskId.value]
-    input.focus()
-    input.setSelectionRange(0, 0) // Position cursor at the beginning
+    taskInputRefs.value[activeTaskId.value].focus()
   }
 })
+
+// **EVENT HANDLERS & WATCHERS**
+
+const onTaskInput = (task, event) => {
+  updateTaskText({ id: task.id, newText: event.target.innerText })
+}
+
+// Watch for changes in the active task ID to shift focus
+watch(activeTaskId, (newId) => {
+  if (newId && taskInputRefs.value[newId]) {
+    taskInputRefs.value[newId].focus()
+  }
+})
+
+// Keyboard navigation for multi-line tasks
+useEventListener(window, 'keydown', (event) => {
+  if (event.key !== 'ArrowUp' && event.key !== 'ArrowDown') {
+    return;
+  }
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
+  const currentTaskId = activeTaskId.value;
+  const element = taskInputRefs.value[currentTaskId];
+  if (!element) return;
+
+  const cursorRect = selection.getRangeAt(0).getClientRects()[0];
+  const elementRect = element.getBoundingClientRect();
+
+  if (!cursorRect) return;
+
+  // Check if the cursor is on the first or last line of the text block
+  if (event.key === 'ArrowDown' && cursorRect.bottom >= elementRect.bottom - 5) {
+    event.preventDefault(); // Prevent default multi-line navigation
+    selectNextTask();
+  } else if (event.key === 'ArrowUp' && cursorRect.top <= elementRect.top + 5) {
+    event.preventDefault(); // Prevent default multi-line navigation
+    selectPreviousTask();
+  }
+});
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-center min-h-screen p-4 bg-background"
-    @keydown.up.prevent
-    @keydown.down.prevent
-  >
+  <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
     <div class="w-full max-w-md">
       <ul v-if="taskCount > 0" class="space-y-1">
         <li
           v-for="task in taskList"
           :key="task.id"
           class="flex items-center gap-3 p-2 rounded-lg"
-          :class="{ 'bg-highlight border border-highlight-border': task.id === activeTaskId }"
+          :class="{ 'bg-highlight': task.id === activeTaskId }"
         >
           <input
             type="checkbox"
@@ -76,16 +114,16 @@ onMounted(() => {
             class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0"
             :style="{ accentColor: 'var(--color-primary)' }"
           />
-          <input
-            type="text"
+          <div
             :ref="(el) => { if (el) taskInputRefs[task.id] = el }"
-            :value="task.text"
-            @input="updateTaskText({ id: task.id, newText: $event.target.value })"
+            :contenteditable="true"
+            @input="onTaskInput(task, $event)"
             @focus="activeTaskId = task.id"
-            class="w-full bg-transparent focus:outline-none text-lg"
+            @blur="onTaskInput(task, $event)"
+            class="w-full bg-transparent text-lg resize-none overflow-hidden editable"
             :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
-            :style="task.completed ? { color: 'var(--color-foreground)', opacity: 0.5, textDecoration: 'line-through' } : { color: 'var(--color-foreground)' }"
-          />
+          >
+          </div>
         </li>
       </ul>
       <p v-else class="text-muted italic text-center p-4">
