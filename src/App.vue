@@ -46,19 +46,28 @@ onBeforeUpdate(() => {
 
 // When the component mounts, populate the divs and focus the active task.
 onMounted(() => {
-  // Manually populate the text for all visible tasks
-  taskList.value.forEach(task => {
-    const el = taskInputRefs.value[task.id]
-    if (el) {
-      el.innerText = task.text
-    }
-  })
-
-  // Pre-select the first task if available
-  if (taskList.value.length > 0) {
-    activeTaskId.value = taskList.value[0].id
-    if (taskInputRefs.value[activeTaskId.value]) {
-      taskInputRefs.value[activeTaskId.value].focus()
+  // Seed an empty task if there are no tasks
+  if (taskList.value.length === 0) {
+    const newId = tasksStore.insertTaskAt(-1, '')
+    activeTaskId.value = newId
+    nextTick(() => {
+      const el = taskInputRefs.value[newId]
+      if (el) el.focus()
+    })
+  } else {
+    // Manually populate the text for all visible tasks
+    taskList.value.forEach(task => {
+      const el = taskInputRefs.value[task.id]
+      if (el) {
+        el.innerText = task.text
+      }
+    })
+    // Pre-select the first task if available
+    if (taskList.value.length > 0) {
+      activeTaskId.value = taskList.value[0].id
+      if (taskInputRefs.value[activeTaskId.value]) {
+        taskInputRefs.value[activeTaskId.value].focus()
+      }
     }
   }
 })
@@ -110,7 +119,8 @@ useEventListener(window, 'keydown', (event) => {
       const element = taskInputRefs.value[activeTaskId.value];
       const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
 
-      if (element && element.innerText.trim() === '') {
+      // Prevent deletion if only one task remains
+      if (element && element.innerText.trim() === '' && taskList.value.length > 1) {
         event.preventDefault();
 
         // Determine the next active task
@@ -244,9 +254,6 @@ useEventListener(window, 'keydown', (event) => {
           </div>
         </li>
       </ul>
-      <p v-else class="text-muted italic text-center p-4">
-        No tasks yet. Add one to get started!
-      </p>
     </div>
   </div>
 </template>
