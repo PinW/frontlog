@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onBeforeUpdate } from 'vue'
+import { ref, watch, onMounted, onBeforeUpdate, nextTick } from 'vue'
 import { useTasksStore } from './stores/tasks'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
@@ -10,6 +10,7 @@ const tasksStore = useTasksStore()
 const { taskList, taskCount, activeTaskId } = storeToRefs(tasksStore)
 const {
   addTask,
+  insertTaskAt,
   removeTask,
   toggleTaskCompletion,
   selectNextTask,
@@ -17,18 +18,22 @@ const {
   updateTaskText
 } = tasksStore
 
-// State for the new task input
-const newTaskContent = ref('')
-
 // Refs for the editable div elements
 const taskInputRefs = ref({})
 
 // Function to add a new task
-function addNewTask() {
-  if (newTaskContent.value.trim()) {
-    tasksStore.addTask(newTaskContent.value)
-    newTaskContent.value = ''
-  }
+function insertTask() {
+  // Find the index of the active task
+  const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value)
+  // Insert a new empty task below the current one (or at the top if none active)
+  const newId = tasksStore.insertTaskAt(currentIndex, '')
+  // Set the new task as active
+  activeTaskId.value = newId
+  // Wait for DOM update, then focus the new task's contenteditable div
+  nextTick(() => {
+    const el = taskInputRefs.value[newId]
+    if (el) el.focus()
+  })
 }
 
 // **LIFECYCLE HOOKS FOR REF MANAGEMENT**
@@ -86,6 +91,71 @@ useEventListener(window, 'keydown', (event) => {
     }
     return;
   }
+  // Handle ENTER key for inserting a new task
+  if (event.key === 'Enter' && activeTaskId.value) {
+    // Only trigger if the active element is a task input
+    const el = taskInputRefs.value[activeTaskId.value];
+    if (el && document.activeElement === el) {
+      if (!event.shiftKey) {
+        event.preventDefault();
+        insertTask();
+        return;
+      }
+      // If shiftKey is pressed, allow default (newline)
+    }
+  }
+  // Handle backspace
+  if (event.key === 'Backspace') {
+    if (activeTaskId.value) {
+      const element = taskInputRefs.value[activeTaskId.value];
+      const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
+
+      if (element && element.innerText.trim() === '') {
+        event.preventDefault();
+
+        // Determine the next active task
+        let newActiveTaskId = null;
+        if (taskList.value.length > 1) {
+          if (currentIndex > 0) {
+            newActiveTaskId = taskList.value[currentIndex - 1].id;
+          } else {
+            newActiveTaskId = taskList.value[1].id;
+          }
+        }
+
+        // Clear selection before removal
+        const sel = window.getSelection();
+        if (sel) sel.removeAllRanges();
+
+        removeTask(activeTaskId.value);
+        activeTaskId.value = newActiveTaskId;
+
+        nextTick(() => {
+          // Fallback: clear selection again after DOM update
+          const sel2 = window.getSelection();
+          if (sel2) sel2.removeAllRanges();
+
+          if (newActiveTaskId && taskInputRefs.value[newActiveTaskId]) {
+            const elToFocus = taskInputRefs.value[newActiveTaskId];
+            elToFocus.focus();
+
+            // Place cursor at end
+            const range = document.createRange();
+            range.selectNodeContents(elToFocus);
+            range.collapse(false);
+            const sel3 = window.getSelection();
+            if (sel3) {
+              sel3.removeAllRanges();
+              sel3.addRange(range);
+            }
+          }
+        });
+        return;
+      }
+    }
+  }
+
+  // Navigational keys
   if (!navKeys.includes(event.key)) return;
 
   // If no active task, select first/last depending on key
@@ -109,22 +179,36 @@ useEventListener(window, 'keydown', (event) => {
   }
 
   // Existing up/down navigation logic
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-
   const currentTaskId = activeTaskId.value;
   const element = taskInputRefs.value[currentTaskId];
   if (!element) return;
 
-  const cursorRect = selection.getRangeAt(0).getClientRects()[0];
+  // If the task is empty, always allow up/down navigation
+  const isEmpty = element.innerText.trim() === '';
+  if (isEmpty) {
+    event.preventDefault();
+    if (event.key === 'ArrowDown') {
+      selectNextTask();
+    } else if (event.key === 'ArrowUp') {
+      selectPreviousTask();
+    }
+    return;
+  }
+
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+
   const elementRect = element.getBoundingClientRect();
+  const cursorRect = selection.getRangeAt(0).getClientRects()[0];
 
-  if (!cursorRect) return;
+  // If cursorRect is undefined, treat it as being at the boundary.
+  const atTopBoundary = !cursorRect || cursorRect.top <= elementRect.top + 5;
+  const atBottomBoundary = !cursorRect || cursorRect.bottom >= elementRect.bottom - 5;
 
-  if (event.key === 'ArrowDown' && cursorRect.bottom >= elementRect.bottom - 5) {
+  if (event.key === 'ArrowDown' && atBottomBoundary) {
     event.preventDefault();
     selectNextTask();
-  } else if (event.key === 'ArrowUp' && cursorRect.top <= elementRect.top + 5) {
+  } else if (event.key === 'ArrowUp' && atTopBoundary) {
     event.preventDefault();
     selectPreviousTask();
   }
@@ -163,26 +247,6 @@ useEventListener(window, 'keydown', (event) => {
       <p v-else class="text-muted italic text-center p-4">
         No tasks yet. Add one to get started!
       </p>
-    </div>
-
-    <div class="w-full max-w-md mt-8">
-      <div class="relative">
-        <input
-          type="text"
-          v-model="newTaskContent"
-          @keyup.enter="addNewTask"
-          placeholder="What needs to be done?"
-          class="w-full p-3 pr-28 border rounded-lg focus:outline-none focus:ring-2"
-          style="background: var(--color-card); color: var(--color-foreground); border-color: var(--color-border);"
-        />
-        <button
-          @click="addNewTask"
-          class="absolute right-1 top-1 bottom-1 px-5 py-2 text-white rounded-md hover:opacity-90 transition-colors duration-300"
-          style="background: var(--color-primary); color: var(--color-primary-foreground);"
-        >
-          Add
-        </button>
-      </div>
     </div>
   </div>
 </template>

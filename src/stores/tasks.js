@@ -31,6 +31,28 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   /**
+   * Inserts a new task at a specific index in the list.
+   * @param {number} index - The index after which to insert the new task.
+   * @param {string} text - The content of the new task.
+   * If index is -1, inserts at the start.
+   */
+  function insertTaskAt(index, text) {
+    const trimmedText = text ? text.trim() : ''
+    // Allow empty string for quick-add
+    const newTask = {
+      id: uuidv4(),
+      text: trimmedText,
+      completed: false
+    }
+    if (index < 0) {
+      tasks.value.unshift(newTask)
+    } else {
+      tasks.value.splice(index + 1, 0, newTask)
+    }
+    return newTask.id
+  }
+
+  /**
    * Removes a task from the list by its ID.
    * @param {string} taskId - The ID of the task to remove.
    */
@@ -94,6 +116,7 @@ export const useTasksStore = defineStore('tasks', () => {
     taskList,
     taskCount,
     addTask,
+    insertTaskAt,
     removeTask,
     toggleTaskCompletion,
     clearAllTasks,
