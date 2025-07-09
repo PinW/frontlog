@@ -131,13 +131,6 @@ watch(activeTaskId, (newId, oldId) => {
         selection.addRange(range);
       }
       window.__navDirection = null;
-    } else {
-      // Fallback: just place cursor at the end
-      const range = document.createRange();
-      range.selectNodeContents(el);
-      range.collapse(false);
-      selection.removeAllRanges();
-      selection.addRange(range);
     }
   });
 });
@@ -160,6 +153,12 @@ useEventListener(window, 'keydown', (event) => {
   }
   // Handle ENTER key for inserting a new task
   if (event.key === 'Enter' && activeTaskId.value) {
+    // Control+Enter toggles completion
+    if (event.ctrlKey) {
+      event.preventDefault();
+      toggleTaskCompletion(activeTaskId.value);
+      return;
+    }
     // Only trigger if the active element is a task input
     const el = taskInputRefs.value[activeTaskId.value];
     if (el && document.activeElement === el) {
@@ -171,8 +170,8 @@ useEventListener(window, 'keydown', (event) => {
       // If shiftKey is pressed, allow default (newline)
     }
   }
-  // Handle backspace
-  if (event.key === 'Backspace') {
+  // Handle backspace and delete
+  if (event.key === 'Backspace' || event.key === 'Delete') {
     if (activeTaskId.value) {
       const element = taskInputRefs.value[activeTaskId.value];
       const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
@@ -184,10 +183,19 @@ useEventListener(window, 'keydown', (event) => {
         // Determine the next active task
         let newActiveTaskId = null;
         if (taskList.value.length > 1) {
-          if (currentIndex > 0) {
-            newActiveTaskId = taskList.value[currentIndex - 1].id;
-          } else {
-            newActiveTaskId = taskList.value[1].id;
+          if (event.key === 'Delete') {
+            // Focus next task if possible, otherwise previous
+            if (currentIndex < taskList.value.length - 1) {
+              newActiveTaskId = taskList.value[currentIndex + 1].id;
+            } else if (currentIndex > 0) {
+              newActiveTaskId = taskList.value[currentIndex - 1].id;
+            }
+          } else { // Backspace
+            if (currentIndex > 0) {
+              newActiveTaskId = taskList.value[currentIndex - 1].id;
+            } else {
+              newActiveTaskId = taskList.value[1].id;
+            }
           }
         }
 
@@ -206,16 +214,6 @@ useEventListener(window, 'keydown', (event) => {
           if (newActiveTaskId && taskInputRefs.value[newActiveTaskId]) {
             const elToFocus = taskInputRefs.value[newActiveTaskId];
             elToFocus.focus();
-
-            // Place cursor at end
-            const range = document.createRange();
-            range.selectNodeContents(elToFocus);
-            range.collapse(false);
-            const sel3 = window.getSelection();
-            if (sel3) {
-              sel3.removeAllRanges();
-              sel3.addRange(range);
-            }
           }
         });
         return;
@@ -333,5 +331,6 @@ useEventListener(document, 'selectionchange', () => {
         </li>
       </ul>
     </div>
+    <HotkeyHelper />
   </div>
 </template>
