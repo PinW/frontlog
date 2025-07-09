@@ -3,6 +3,7 @@ import { ref, watch, onMounted, onBeforeUpdate, nextTick } from 'vue'
 import { useTasksStore } from './stores/tasks'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
+import HotkeyHelper from './components/HotkeyHelper.vue'
 
 
 // Initialize the store
