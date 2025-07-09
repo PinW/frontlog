@@ -21,6 +21,24 @@ const {
 // Refs for the editable div elements
 const taskInputRefs = ref({})
 
+// New state for cursor's desired horizontal position
+const desiredXPosition = ref(null)
+
+/**
+ * Gets the current cursor's horizontal position (x-coordinate) and stores it.
+ */
+function updateDesiredXPosition() {
+  const selection = window.getSelection()
+  if (selection && selection.rangeCount > 0) {
+    // Get the bounding box of the cursor's range
+    const range = selection.getRangeAt(0)
+    const rect = range.getClientRects()[0]
+    if (rect) {
+      desiredXPosition.value = rect.left
+    }
+  }
+}
+
 // Function to add a new task
 function insertTask() {
   // Find the index of the active task
@@ -78,15 +96,55 @@ const onTaskInput = (task, event) => {
   updateTaskText({ id: task.id, newText: event.target.innerText })
 }
 
-// Watch for changes in the active task ID to shift focus
-watch(activeTaskId, (newId) => {
-  if (newId && taskInputRefs.value[newId]) {
-    taskInputRefs.value[newId].focus()
-  }
-})
+// Watch for changes in the active task ID to focus and place cursor smartly only when navigating at top/bottom
+watch(activeTaskId, (newId, oldId) => {
+  if (!newId) return;
+
+  nextTick(() => {
+    const el = taskInputRefs.value[newId];
+    if (!el) return;
+
+    el.focus();
+    const selection = window.getSelection();
+    if (!selection) return;
+
+    // Only apply smart X position if we navigated up/down at the top/bottom boundary
+    if (desiredXPosition.value !== null && oldId !== null && window.__navDirection) {
+      const elRect = el.getBoundingClientRect();
+      let yCoord = elRect.top + 5;
+      if (window.__navDirection === 'up') {
+        yCoord = elRect.bottom - 5;
+      }
+      let range = null;
+      if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(desiredXPosition.value, yCoord);
+        if (pos) {
+          range = document.createRange();
+          range.setStart(pos.offsetNode, pos.offset);
+          range.collapse(true);
+        }
+      } else if (document.caretRangeFromPoint) {
+        range = document.caretRangeFromPoint(desiredXPosition.value, yCoord);
+      }
+      if (range) {
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+      window.__navDirection = null;
+    } else {
+      // Fallback: just place cursor at the end
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      range.collapse(false);
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+  });
+});
 
 // Keyboard navigation for multi-line tasks
 useEventListener(window, 'keydown', (event) => {
+  
   // Navigation keys
   const navKeys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
   if (event.key === 'Escape') {
@@ -193,6 +251,12 @@ useEventListener(window, 'keydown', (event) => {
   const element = taskInputRefs.value[currentTaskId];
   if (!element) return;
 
+  // Before navigating up or down, store the current X position
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    updateDesiredXPosition();
+    window.__navDirection = event.key === 'ArrowUp' ? 'up' : 'down';
+  }
+
   // If the task is empty, always allow up/down navigation
   const isEmpty = element.innerText.trim() === '';
   if (isEmpty) {
@@ -223,6 +287,19 @@ useEventListener(window, 'keydown', (event) => {
     selectPreviousTask();
   }
 });
+
+/*
+useEventListener(document, 'selectionchange', () => {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const node = selection.anchorNode instanceof Element
+    ? selection.anchorNode
+    : selection.anchorNode.parentElement;
+  if (node && node.closest('.task-input')) {
+    updateDesiredXPosition();
+  }
+});
+*/
 </script>
 
 <template>
@@ -247,8 +324,9 @@ useEventListener(window, 'keydown', (event) => {
             :contenteditable="true"
             @input="onTaskInput(task, $event)"
             @focus="activeTaskId = task.id"
+            @click="updateDesiredXPosition"
             @blur="(event) => { onTaskInput(task, event); activeTaskId = null }"
-            class="w-full bg-transparent text-lg resize-none overflow-hidden editable"
+            class="task-input w-full bg-transparent text-lg resize-none overflow-hidden editable"
             :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
           >
           </div>
