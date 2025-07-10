@@ -8,9 +8,8 @@ export const useHotkeysStore = defineStore('hotkeys', {
       { action: 'Complete Task', combo: ['Ctrl', '+', 'Enter'] },
       { action: 'Navigate', combo: ['&#x2191; / &#x2193;'] },
       { action: 'Delete Task', combo: ['Backspace', '/', 'Delete'] },
-      { action: 'Reorder Task', combo: ['Ctrl', '+', '&#x2191; / &#x2193;'] },
-      { action: 'Nest Task', combo: ['Tab'] },
-      { action: 'Unnest Task', combo: ['Shift', '+', 'Tab'] },
+      { action: 'Reorder Task', combo: ['Ctrl', '+', '&#x2191;','&#x2193;','&#x2190;','&#x2192;'] },
+      { action: 'Nest/Unnest', combo: ['(','Shift', ')', '+', 'Tab'] },
     ],
   }),
   getters: {

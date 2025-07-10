@@ -5,19 +5,22 @@ import { useSettingsStore } from './stores/settings'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
 import HotkeyHelper from './components/HotkeyHelper.vue'
+
 import Settings from './components/Settings.vue'
+import TaskItem from './components/TaskItem.vue'
 
 // Add import for process.env if needed (Vite exposes import.meta.env)
 const isDev = import.meta.env.MODE === 'development'
 
 // Initialize the store
 const tasksStore = useTasksStore()
-const { taskList, taskCount, activeTaskId } = storeToRefs(tasksStore)
+const { taskList, taskCount, activeTaskId, flattenedTaskList } = storeToRefs(tasksStore)
 const settingsStore = useSettingsStore()
 const { spellcheckEnabled } = storeToRefs(settingsStore)
+
 const {
   addTask,
-  insertTaskAt,
+  insertTaskAfter,
   removeTask,
   toggleTaskCompletion,
   selectNextTask,
@@ -92,17 +95,34 @@ function placeCursorAtCoordinates(element, coords) {
 
 // Function to add a new task
 function insertTask(insertAbove = false) {
-  // Find the index of the active task
-  const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value)
-  // Insert a new empty task below the current one (or at the top if none active)
-  const newId = tasksStore.insertTaskAt(currentIndex, '', insertAbove)
-  // Set the new task as active
-  activeTaskId.value = newId
-  // Wait for DOM update, then focus the new task's contenteditable div
+  let prevTaskId = null;
+  if (activeTaskId.value) {
+    const flat = taskList.value;
+    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value);
+    if (insertAbove) {
+      // Insert above: find the previous task in the flat list
+      prevTaskId = currentIndex > 0 ? flat[currentIndex - 1].id : null;
+    } else {
+      // Insert below: use the current task as previous
+      prevTaskId = activeTaskId.value;
+    }
+  }
+  // If no active task, insert at root start
+  const newId = tasksStore.insertTaskAfter(prevTaskId, '');
+  activeTaskId.value = newId;
   nextTick(() => {
-    const el = taskInputRefs.value[newId]
-    if (el) el.focus()
-  })
+    const el = taskInputRefs.value[newId];
+    if (el) el.focus();
+  });
+}
+
+// Add onFocus and onBlur handlers
+function onFocus(taskId) {
+  activeTaskId.value = taskId
+}
+function onBlur(task, event) {
+  onTaskInput(task, event)
+  activeTaskId.value = null
 }
 
 // **LIFECYCLE HOOKS FOR REF MANAGEMENT**
@@ -113,24 +133,32 @@ onBeforeUpdate(() => {
   taskInputRefs.value = {}
 })
 
+// Utility: Recursively sync innerText for all tasks at all levels
+function syncAllTaskTexts(tasks, refs) {
+  for (const task of tasks) {
+    const el = refs[task.id];
+    if (el) el.innerText = task.text;
+    if (task.children && task.children.length) {
+      syncAllTaskTexts(task.children, refs);
+    }
+  }
+}
+
 // When the component mounts, populate the divs and focus the active task.
 onMounted(() => {
+  // Wait for refs to be populated, then sync all task texts
+  nextTick(() => {
+    syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
+  });
   // Seed an empty task if there are no tasks
   if (taskList.value.length === 0) {
-    const newId = tasksStore.insertTaskAt(-1, '')
+    const newId = tasksStore.insertTaskAfter(null, '')
     activeTaskId.value = newId
     nextTick(() => {
       const el = taskInputRefs.value[newId]
       if (el) el.focus()
     })
   } else {
-    // Manually populate the text for all visible tasks
-    taskList.value.forEach(task => {
-      const el = taskInputRefs.value[task.id]
-      if (el) {
-        el.innerText = task.text
-      }
-    })
     // Pre-select the first task if available
     if (taskList.value.length > 0) {
       activeTaskId.value = taskList.value[0].id
@@ -226,45 +254,38 @@ useEventListener(window, 'keydown', (event) => {
   if (event.key === 'Backspace' || event.key === 'Delete') {
     if (activeTaskId.value) {
       const element = taskInputRefs.value[activeTaskId.value];
-      const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
-
-      // Prevent deletion if only one task remains
-      if (element && element.innerText.trim() === '' && taskList.value.length > 1) {
+      const flat = flattenedTaskList.value;
+      const currentIndex = flat.findIndex(item => item.task.id === activeTaskId.value);
+      let newActiveTaskId = null;
+      if (element && element.innerText.trim() === '' && flat.length > 1) {
         event.preventDefault();
-
-        // Determine the next active task
-        let newActiveTaskId = null;
-        if (taskList.value.length > 1) {
-          if (event.key === 'Delete') {
-            // Focus next task if possible, otherwise previous
-            if (currentIndex < taskList.value.length - 1) {
-              newActiveTaskId = taskList.value[currentIndex + 1].id;
-            } else if (currentIndex > 0) {
-              newActiveTaskId = taskList.value[currentIndex - 1].id;
-            }
-          } else { // Backspace
-            if (currentIndex > 0) {
-              newActiveTaskId = taskList.value[currentIndex - 1].id;
-            } else {
-              newActiveTaskId = taskList.value[1].id;
-            }
+        if (event.key === 'Delete') {
+          // Next in list, or previous if at the end
+          if (currentIndex < flat.length - 1) {
+            newActiveTaskId = flat[currentIndex + 1].task.id;
+          } else if (currentIndex > 0) {
+            newActiveTaskId = flat[currentIndex - 1].task.id;
+          }
+        } else { // Backspace
+          // Previous in list, or next if at the start
+          if (currentIndex > 0) {
+            newActiveTaskId = flat[currentIndex - 1].task.id;
+          } else if (flat.length > 1) {
+            newActiveTaskId = flat[1].task.id;
           }
         }
-
+        // Remove the task
+        removeTask(activeTaskId.value);
+        // Set the new active task
+        activeTaskId.value = newActiveTaskId ?? null;
         // Clear selection before removal
         const sel = window.getSelection();
         if (sel) sel.removeAllRanges();
-
-        removeTask(activeTaskId.value);
-        activeTaskId.value = newActiveTaskId;
-
         nextTick(() => {
-          // Fallback: clear selection again after DOM update
           const sel2 = window.getSelection();
           if (sel2) sel2.removeAllRanges();
-
-          if (newActiveTaskId && taskInputRefs.value[newActiveTaskId]) {
-            const elToFocus = taskInputRefs.value[newActiveTaskId];
+          if (activeTaskId.value && taskInputRefs.value[activeTaskId.value]) {
+            const elToFocus = taskInputRefs.value[activeTaskId.value];
             elToFocus.focus();
           }
         });
@@ -273,56 +294,62 @@ useEventListener(window, 'keydown', (event) => {
     }
   }
 
-  // Handle Tab for nesting and Shift+Tab for unnesting
-  if (event.key === 'Tab' && activeTaskId.value) {
+  // Handle Tab for nesting and Shift+Tab for unnesting, and Ctrl+ArrowRight/Left for the same actions
+  if ((event.key === 'Tab' && activeTaskId.value) ||
+      (event.key === 'ArrowRight' && event.ctrlKey && activeTaskId.value) ||
+      (event.key === 'ArrowLeft' && event.ctrlKey && activeTaskId.value)) {
     event.preventDefault();
-    const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
 
-    if (event.shiftKey) {
-      // Unnest task (remains the same)
-      unnestTask(activeTaskId.value);
-    } else {
-      // Nest task with corrected hierarchical logic
-      if (currentIndex > 0) {
-        const currentTask = taskList.value[currentIndex];
-        const currentLevel = getTaskIndentation(currentTask.id);
+    let relativePos = null;
+    const selection = window.getSelection();
+    const element = taskInputRefs.value[activeTaskId.value];
+    const isEmpty = element && element.innerText.trim() === '';
 
-        // Find the nearest preceding task at the same level to nest under.
-        let parentId = null;
-        for (let i = currentIndex - 1; i >= 0; i--) {
-          const candidateTask = taskList.value[i];
-          const candidateLevel = getTaskIndentation(candidateTask.id);
-
-          if (candidateLevel === currentLevel) {
-            // This is a sibling, but its predecessor is the parent.
-            // The actual parent is the task just before this one in the list.
-            const potentialParent = taskList.value[i];
-            const parentLevel = getTaskIndentation(potentialParent.id);
-            if (parentLevel < currentLevel + 1) { // Failsafe
-                parentId = potentialParent.id;
-            }
-            break;
-          } else if (candidateLevel < currentLevel) {
-            // We've gone past our current level without finding a sibling.
-            // The last task we saw is the parent.
-            const potentialParent = taskList.value[i];
-            parentId = potentialParent.id;
-            break;
-          }
-        }
-        // Fallback to original parent if no better one is found
-        if (!parentId) {
-            const predecessor = taskList.value[currentIndex -1];
-            if (getTaskIndentation(predecessor.id) >= currentLevel) {
-                parentId = predecessor.id
-            }
-        }
-
-        if (parentId) {
-          nestTask(activeTaskId.value, parentId);
-        }
+    // Capture the relative visual position before the action, but only if not empty
+    if (!isEmpty && selection && selection.rangeCount > 0 && element) {
+      const cursorRect = selection.getRangeAt(0).getClientRects()[0];
+      const elementRect = element.getBoundingClientRect();
+      if (cursorRect) {
+        relativePos = {
+          x: cursorRect.left - elementRect.left,
+          y: cursorRect.top - elementRect.top,
+        };
       }
     }
+
+    // Perform the nest or unnest action
+    if ((event.key === 'Tab' && event.shiftKey) || event.key === 'ArrowLeft') {
+      unnestTask(activeTaskId.value);
+    } else if (event.key === 'Tab' || event.key === 'ArrowRight') {
+      nestTask(activeTaskId.value);
+    }
+
+    // After the DOM update, restore the cursor's position
+    nextTick(() => {
+      syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
+      const el = taskInputRefs.value[activeTaskId.value];
+      if (!el) return;
+
+      el.focus(); // Always focus the element
+
+      // If not empty and we have a position, restore it
+      if (!isEmpty && relativePos) {
+        const elRect = el.getBoundingClientRect();
+        const absoluteCoords = {
+          x: elRect.left + relativePos.x,
+          y: elRect.top + relativePos.y,
+        };
+        placeCursorAtCoordinates(el, absoluteCoords);
+      } else if (isEmpty) {
+        // For empty elements, just place the cursor at the start
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(el, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    });
     return;
   }
 
@@ -348,6 +375,7 @@ useEventListener(window, 'keydown', (event) => {
       event.preventDefault();
       moveTaskUp(activeTaskId.value);
       nextTick(() => {
+        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
         const el = taskInputRefs.value[activeTaskId.value];
         if (!el || !relativePos) return;
 
@@ -365,6 +393,7 @@ useEventListener(window, 'keydown', (event) => {
       event.preventDefault();
       moveTaskDown(activeTaskId.value);
       nextTick(() => {
+        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
         const el = taskInputRefs.value[activeTaskId.value];
         if (!el || !relativePos) return;
 
@@ -445,47 +474,49 @@ useEventListener(window, 'keydown', (event) => {
     selectPreviousTask();
   }
 });
+
+function clearLocalStorage() {
+  localStorage.clear();
+  location.reload();
+  // After reload, onMounted will sync all task texts
+}
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-    <button
-      v-if="isDev"
-      @click="tasksStore.clearAllTasks()"
-      class="fixed top-2 left-2 z-50 px-3 py-1 rounded bg-red-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
-      title="Clear all tasks (debug)"
-    >
-      Clear All Tasks
-    </button>
+    <div class="fixed top-2 left-2 z-50 flex gap-2">
+      <button
+        v-if="isDev"
+        @click="tasksStore.clearAllTasks()"
+        class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
+        title="Clear all tasks (debug)"
+      >
+        Clear All Tasks
+      </button>
+      <button
+        v-if="isDev"
+        @click="clearLocalStorage"
+        class="px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-blue-700 transition-all"
+        title="Clear local storage (debug)"
+      >
+        Clear Local Storage
+      </button>
+    </div>
     <div class="w-full max-w-md">
-      <ul v-if="taskCount > 0" class="space-y-1">
-        <li
+      <ul v-if="taskCount > 0">
+        <TaskItem
           v-for="task in taskList"
           :key="task.id"
-          class="flex items-start gap-3 p-2 rounded-lg"
-          :class="{ 'bg-highlight': task.id === activeTaskId }"
-          :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
-        >
-          <input
-            type="checkbox"
-            :checked="task.completed"
-            @change="toggleTaskCompletion(task.id)"
-            class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
-            :style="{ accentColor: 'var(--color-primary)' }"
-          />
-          <div
-            :ref="(el) => { if (el) taskInputRefs[task.id] = el }"
-            :contenteditable="true"
-            :spellcheck="spellcheckEnabled"
-            @input="onTaskInput(task, $event)"
-            @focus="activeTaskId = task.id"
-            @click="updateDesiredXPosition"
-            @blur="(event) => { onTaskInput(task, event); activeTaskId = null }"
-            class="task-input w-full bg-transparent text-lg resize-none overflow-hidden editable"
-            :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
-          >
-          </div>
-        </li>
+          :task="task"
+          :activeTaskId="activeTaskId"
+          :taskInputRefs="taskInputRefs"
+          :getTaskIndentation="getTaskIndentation"
+          :toggleTaskCompletion="toggleTaskCompletion"
+          :onTaskInput="onTaskInput"
+          :onFocus="onFocus"
+          :onBlur="onBlur"
+          :updateDesiredXPosition="updateDesiredXPosition"
+        />
       </ul>
     </div>
     <HotkeyHelper />
