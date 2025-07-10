@@ -31,17 +31,6 @@ const {
   unnestTask
 } = tasksStore
 
-// Function to get the indentation level of a task
-const getTaskIndentation = (taskId) => {
-  let indentation = 0;
-  let currentTask = taskList.value.find(task => task.id === taskId);
-  while (currentTask && currentTask.parentId) {
-    indentation++;
-    currentTask = taskList.value.find(task => task.id === currentTask.parentId);
-  }
-  return indentation;
-}
-
 // Refs for the editable div elements
 const taskInputRefs = ref({})
 
@@ -469,7 +458,7 @@ function clearLocalStorage() {
           :task="task"
           :activeTaskId="activeTaskId"
           :taskInputRefs="taskInputRefs"
-          :getTaskIndentation="getTaskIndentation"
+          :getTaskIndentation="tasksStore.getTaskIndentation"
           :toggleTaskCompletion="toggleTaskCompletion"
           :onTaskInput="onTaskInput"
           :onFocus="onFocus"

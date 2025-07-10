@@ -107,6 +107,15 @@ export const useTasksStore = defineStore('tasks', () => {
 
   const flattenedTaskList = computed(() => flatten())
 
+  // Create a map for quick level lookups. This is highly efficient.
+  const taskLevels = computed(() => {
+    const levelMap = new Map();
+    for (const item of flattenedTaskList.value) {
+      levelMap.set(item.task.id, item.level);
+    }
+    return levelMap;
+  });
+
   // --- ACTIONS ---
   /**
    * Creates and inserts a new task.
@@ -340,6 +349,16 @@ export const useTasksStore = defineStore('tasks', () => {
     parentMeta.siblings.splice(parentMeta.index + 1, 0, taskToUnnest);
   }
 
+  /**
+   * Calculates the indentation level for a given task.
+   * @param {string} taskId - The ID of the task.
+   * @returns {number} The indentation level.
+   */
+  function getTaskIndentation(taskId) {
+    // Look up the pre-calculated level from our map.
+    return taskLevels.value.get(taskId) ?? 0;
+  }
+
   // --- RETURN ---
   return {
     tasks,
@@ -358,6 +377,7 @@ export const useTasksStore = defineStore('tasks', () => {
     moveTaskDown,
     nestTask,
     unnestTask,
+    getTaskIndentation,
   }
 
 }, {
