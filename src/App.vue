@@ -297,9 +297,10 @@ useEventListener(window, 'keydown', (event) => {
     let relativePos = null;
     const selection = window.getSelection();
     const element = taskInputRefs.value[activeTaskId.value];
+    const isEmpty = element && element.innerText.trim() === '';
 
-    // Capture the relative visual position before the action
-    if (selection && selection.rangeCount > 0 && element) {
+    // Capture the relative visual position before the action, but only if not empty
+    if (!isEmpty && selection && selection.rangeCount > 0 && element) {
       const cursorRect = selection.getRangeAt(0).getClientRects()[0];
       const elementRect = element.getBoundingClientRect();
       if (cursorRect) {
@@ -321,15 +322,27 @@ useEventListener(window, 'keydown', (event) => {
     nextTick(() => {
       syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
       const el = taskInputRefs.value[activeTaskId.value];
-      if (!el || !relativePos) return;
+      if (!el) return;
 
-      el.focus(); // Focus first
-      const elRect = el.getBoundingClientRect();
-      const absoluteCoords = {
-        x: elRect.left + relativePos.x,
-        y: elRect.top + relativePos.y,
-      };
-      placeCursorAtCoordinates(el, absoluteCoords);
+      el.focus(); // Always focus the element
+
+      // If not empty and we have a position, restore it
+      if (!isEmpty && relativePos) {
+        const elRect = el.getBoundingClientRect();
+        const absoluteCoords = {
+          x: elRect.left + relativePos.x,
+          y: elRect.top + relativePos.y,
+        };
+        placeCursorAtCoordinates(el, absoluteCoords);
+      } else if (isEmpty) {
+        // For empty elements, just place the cursor at the start
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(el, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
     });
     return;
   }
