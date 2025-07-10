@@ -1,9 +1,11 @@
 <script setup>
 import { ref, watch, onMounted, onBeforeUpdate, nextTick } from 'vue'
 import { useTasksStore } from './stores/tasks'
+import { useSettingsStore } from './stores/settings'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
 import HotkeyHelper from './components/HotkeyHelper.vue'
+import Settings from './components/Settings.vue'
 
 // Add import for process.env if needed (Vite exposes import.meta.env)
 const isDev = import.meta.env.MODE === 'development'
@@ -11,6 +13,8 @@ const isDev = import.meta.env.MODE === 'development'
 // Initialize the store
 const tasksStore = useTasksStore()
 const { taskList, taskCount, activeTaskId } = storeToRefs(tasksStore)
+const settingsStore = useSettingsStore()
+const { spellcheckEnabled } = storeToRefs(settingsStore)
 const {
   addTask,
   insertTaskAt,
@@ -472,6 +476,7 @@ useEventListener(window, 'keydown', (event) => {
           <div
             :ref="(el) => { if (el) taskInputRefs[task.id] = el }"
             :contenteditable="true"
+            :spellcheck="spellcheckEnabled"
             @input="onTaskInput(task, $event)"
             @focus="activeTaskId = task.id"
             @click="updateDesiredXPosition"
@@ -484,5 +489,6 @@ useEventListener(window, 'keydown', (event) => {
       </ul>
     </div>
     <HotkeyHelper />
+    <Settings />
   </div>
 </template>
