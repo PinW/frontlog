@@ -18,8 +18,21 @@ const {
   selectPreviousTask,
   updateTaskText,
   moveTaskUp,
-  moveTaskDown
+  moveTaskDown,
+  nestTask,
+  unnestTask
 } = tasksStore
+
+// Function to get the indentation level of a task
+const getTaskIndentation = (taskId) => {
+  let indentation = 0;
+  let currentTask = taskList.value.find(task => task.id === taskId);
+  while (currentTask && currentTask.parentId) {
+    indentation++;
+    currentTask = taskList.value.find(task => task.id === currentTask.parentId);
+  }
+  return indentation;
+}
 
 // Refs for the editable div elements
 const taskInputRefs = ref({})
@@ -247,6 +260,59 @@ useEventListener(window, 'keydown', (event) => {
     }
   }
 
+  // Handle Tab for nesting and Shift+Tab for unnesting
+  if (event.key === 'Tab' && activeTaskId.value) {
+    event.preventDefault();
+    const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
+
+    if (event.shiftKey) {
+      // Unnest task (remains the same)
+      unnestTask(activeTaskId.value);
+    } else {
+      // Nest task with corrected hierarchical logic
+      if (currentIndex > 0) {
+        const currentTask = taskList.value[currentIndex];
+        const currentLevel = getTaskIndentation(currentTask.id);
+
+        // Find the nearest preceding task at the same level to nest under.
+        let parentId = null;
+        for (let i = currentIndex - 1; i >= 0; i--) {
+          const candidateTask = taskList.value[i];
+          const candidateLevel = getTaskIndentation(candidateTask.id);
+
+          if (candidateLevel === currentLevel) {
+            // This is a sibling, but its predecessor is the parent.
+            // The actual parent is the task just before this one in the list.
+            const potentialParent = taskList.value[i];
+            const parentLevel = getTaskIndentation(potentialParent.id);
+            if (parentLevel < currentLevel + 1) { // Failsafe
+                parentId = potentialParent.id;
+            }
+            break;
+          } else if (candidateLevel < currentLevel) {
+            // We've gone past our current level without finding a sibling.
+            // The last task we saw is the parent.
+            const potentialParent = taskList.value[i];
+            parentId = potentialParent.id;
+            break;
+          }
+        }
+        // Fallback to original parent if no better one is found
+        if (!parentId) {
+            const predecessor = taskList.value[currentIndex -1];
+            if (getTaskIndentation(predecessor.id) >= currentLevel) {
+                parentId = predecessor.id
+            }
+        }
+
+        if (parentId) {
+          nestTask(activeTaskId.value, parentId);
+        }
+      }
+    }
+    return;
+  }
+
   // Handle Ctrl+ArrowUp/Down for reordering tasks
   if (event.ctrlKey && activeTaskId.value) {
     let relativePos = null;
@@ -377,6 +443,7 @@ useEventListener(window, 'keydown', (event) => {
           :key="task.id"
           class="flex items-center gap-3 p-2 rounded-lg"
           :class="{ 'bg-highlight': task.id === activeTaskId }"
+          :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
         >
           <input
             type="checkbox"

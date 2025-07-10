@@ -42,7 +42,8 @@ export const useTasksStore = defineStore('tasks', () => {
     const newTask = {
       id: uuidv4(),
       text: trimmedText,
-      completed: false
+      completed: false,
+      parentId: null
     }
     if (index < 0) {
       tasks.value.unshift(newTask)
@@ -136,6 +137,34 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
+  /**
+   * Nests a task under another task.
+   * @param {string} taskId - The ID of the task to nest.
+   * @param {string} parentId - The ID of the parent task.
+   */
+  function nestTask(taskId, parentId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (task) {
+      task.parentId = parentId
+    }
+  }
+
+  /**
+   * Unnests a task.
+   * @param {string} taskId - The ID of the task to unnest.
+   */
+  function unnestTask(taskId) {
+    const task = tasks.value.find(t => t.id === taskId)
+    if (task && task.parentId) {
+      const parentTask = tasks.value.find(t => t.id === task.parentId)
+      if (parentTask) {
+        task.parentId = parentTask.parentId
+      } else {
+        task.parentId = null // Should not happen if parentId is valid, but as a fallback
+      }
+    }
+  }
+
   // --- RETURN ---
   return {
     tasks,
@@ -152,6 +181,8 @@ export const useTasksStore = defineStore('tasks', () => {
     updateTaskText,
     moveTaskUp,
     moveTaskDown,
+    nestTask,
+    unnestTask,
   }
 
 }, {
