@@ -3,12 +3,12 @@ import { defineStore } from 'pinia'
 export const useHotkeysStore = defineStore('hotkeys', {
   state: () => ({
     hotkeys: [
-      { action: 'Add New Task', combo: 'Enter' },
-      { action: 'New Line', combo: 'Shift+Enter' },
-      { action: 'Toggle Complete', combo: 'Ctrl+Enter' },
-      { action: 'Navigate', combo: 'Arrow Up / Down' },
-      { action: 'Delete Task', combo: 'Backspace / Delete' },
-      { action: 'Reorder Task', combo: 'Ctrl+Arrow Up / Down' },
+      { action: 'Add New Task', combo: ['Enter'] },
+      { action: 'New Line', combo: ['Shift', '+', 'Enter'] },
+      { action: 'Toggle Complete', combo: ['Ctrl', '+', 'Enter'] },
+      { action: 'Navigate', combo: ['&#x2191; / &#x2193;'] },
+      { action: 'Delete Task', combo: ['Backspace', '/', 'Delete'] },
+      { action: 'Reorder Task', combo: ['Ctrl', '+', '&#x2191; / &#x2193;'] },
     ],
   }),
   getters: {
