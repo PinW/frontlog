@@ -5,6 +5,8 @@ import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
 import HotkeyHelper from './components/HotkeyHelper.vue'
 
+// Add import for process.env if needed (Vite exposes import.meta.env)
+const isDev = import.meta.env.MODE === 'development'
 
 // Initialize the store
 const tasksStore = useTasksStore()
@@ -443,12 +445,20 @@ useEventListener(window, 'keydown', (event) => {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+    <button
+      v-if="isDev"
+      @click="tasksStore.clearAllTasks()"
+      class="fixed top-2 left-2 z-50 px-3 py-1 rounded bg-red-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
+      title="Clear all tasks (debug)"
+    >
+      Clear All Tasks
+    </button>
     <div class="w-full max-w-md">
       <ul v-if="taskCount > 0" class="space-y-1">
         <li
           v-for="task in taskList"
           :key="task.id"
-          class="flex items-center gap-3 p-2 rounded-lg"
+          class="flex items-start gap-3 p-2 rounded-lg"
           :class="{ 'bg-highlight': task.id === activeTaskId }"
           :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
         >
@@ -456,7 +466,7 @@ useEventListener(window, 'keydown', (event) => {
             type="checkbox"
             :checked="task.completed"
             @change="toggleTaskCompletion(task.id)"
-            class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0"
+            class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
             :style="{ accentColor: 'var(--color-primary)' }"
           />
           <div
