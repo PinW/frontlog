@@ -24,8 +24,9 @@ const {
 // Refs for the editable div elements
 const taskInputRefs = ref({})
 
-// New state for cursor's desired horizontal position
+// New state for cursor's desired horizontal position and navigation direction
 const desiredXPosition = ref(null)
+const navigationDirection = ref(null)
 
 /**
  * Gets the current cursor's horizontal position (x-coordinate) and stores it.
@@ -39,6 +40,34 @@ function updateDesiredXPosition() {
     if (rect) {
       desiredXPosition.value = rect.left
     }
+  }
+}
+
+/**
+ * Places the cursor at the given {x, y} coordinates within the specified element.
+ * Handles cross-browser differences between caretRangeFromPoint and caretPositionFromPoint.
+ * @param {HTMLElement} element - The contenteditable element to place the cursor in.
+ * @param {{x: number, y: number}} coords - The screen coordinates where the cursor should be placed.
+ */
+function placeCursorAtCoordinates(element, coords) {
+  if (!element || !coords) return;
+  const selection = window.getSelection();
+  let range = null;
+  // Try modern caretRangeFromPoint (Chrome, Firefox)
+  if (document.caretRangeFromPoint) {
+    range = document.caretRangeFromPoint(coords.x, coords.y);
+  } else if (document.caretPositionFromPoint) {
+    // Firefox alternative
+    const pos = document.caretPositionFromPoint(coords.x, coords.y);
+    if (pos) {
+      range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+    }
+  }
+  if (range) {
+    range.collapse(true);
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 }
 
@@ -108,32 +137,22 @@ watch(activeTaskId, (newId, oldId) => {
     if (!el) return;
 
     el.focus();
-    const selection = window.getSelection();
-    if (!selection) return;
 
     // Only apply smart X position if we navigated up/down at the top/bottom boundary
-    if (desiredXPosition.value !== null && oldId !== null && window.__navDirection) {
+    if (desiredXPosition.value !== null && oldId !== null && navigationDirection.value) {
       const elRect = el.getBoundingClientRect();
       let yCoord = elRect.top + 5;
-      if (window.__navDirection === 'up') {
+      if (navigationDirection.value === 'up') {
         yCoord = elRect.bottom - 5;
       }
-      let range = null;
-      if (document.caretPositionFromPoint) {
-        const pos = document.caretPositionFromPoint(desiredXPosition.value, yCoord);
-        if (pos) {
-          range = document.createRange();
-          range.setStart(pos.offsetNode, pos.offset);
-          range.collapse(true);
-        }
-      } else if (document.caretRangeFromPoint) {
-        range = document.caretRangeFromPoint(desiredXPosition.value, yCoord);
-      }
-      if (range) {
-        selection.removeAllRanges();
-        selection.addRange(range);
-      }
-      window.__navDirection = null;
+      
+      const targetCoords = {
+        x: desiredXPosition.value,
+        y: yCoord
+      };
+      
+      placeCursorAtCoordinates(el, targetCoords);
+      navigationDirection.value = null;
     }
   });
 });
@@ -226,54 +245,59 @@ useEventListener(window, 'keydown', (event) => {
 
   // Handle Ctrl+ArrowUp/Down for reordering tasks
   if (event.ctrlKey && activeTaskId.value) {
-    // Capture the visual X position before any action
-    updateDesiredXPosition();
+    let relativePos = null;
+    const selection = window.getSelection();
+    const element = taskInputRefs.value[activeTaskId.value];
 
-    const moveAndRestoreCursor = (moveFn) => {
-      event.preventDefault();
-      moveFn(activeTaskId.value);
-      nextTick(() => {
-        const el = taskInputRefs.value[activeTaskId.value];
-        if (!el || desiredXPosition.value === null) return;
-
-        el.focus();
-        const selection = window.getSelection();
-        if (!selection) return;
-
-        const elRect = el.getBoundingClientRect();
-        const yCoord = elRect.top + elRect.height / 2;
-        let range = null;
-
-        // Cross-browser way to get a range from a point
-        if (document.caretRangeFromPoint) {
-          // Non-standard Chrome/Edge way
-          range = document.caretRangeFromPoint(desiredXPosition.value, yCoord);
-        } else if (document.caretPositionFromPoint) {
-          // Standard Firefox/Safari way
-          const pos = document.caretPositionFromPoint(desiredXPosition.value, yCoord);
-          if (pos) {
-            range = document.createRange();
-            range.setStart(pos.offsetNode, pos.offset);
-          }
-        }
-
-        if (range) {
-          range.collapse(true); // Ensure it's a cursor, not a selection
-          selection.removeAllRanges();
-          selection.addRange(range);
-        }
-      });
-    };
+    // Capture the relative visual position before any action
+    if (selection && selection.rangeCount > 0 && element) {
+      const cursorRect = selection.getRangeAt(0).getClientRects()[0];
+      const elementRect = element.getBoundingClientRect();
+      if (cursorRect) {
+        relativePos = {
+          x: cursorRect.left - elementRect.left,
+          y: cursorRect.top - elementRect.top,
+        };
+      }
+    }
 
     if (event.key === 'ArrowUp') {
-      moveAndRestoreCursor(moveTaskUp);
+      event.preventDefault();
+      moveTaskUp(activeTaskId.value);
+      nextTick(() => {
+        const el = taskInputRefs.value[activeTaskId.value];
+        if (!el || !relativePos) return;
+
+        el.focus();
+        const elRect = el.getBoundingClientRect();
+        // Calculate the new absolute screen position from the stored relative position
+        const absoluteCoords = {
+          x: elRect.left + relativePos.x,
+          y: elRect.top + relativePos.y,
+        };
+        placeCursorAtCoordinates(el, absoluteCoords);
+      });
       return;
     } else if (event.key === 'ArrowDown') {
-      moveAndRestoreCursor(moveTaskDown);
+      event.preventDefault();
+      moveTaskDown(activeTaskId.value);
+      nextTick(() => {
+        const el = taskInputRefs.value[activeTaskId.value];
+        if (!el || !relativePos) return;
+
+        el.focus();
+        const elRect = el.getBoundingClientRect();
+        // Calculate the new absolute screen position from the stored relative position
+        const absoluteCoords = {
+          x: elRect.left + relativePos.x,
+          y: elRect.top + relativePos.y,
+        };
+        placeCursorAtCoordinates(el, absoluteCoords);
+      });
       return;
     }
   }
-
+  
   // Navigational keys
   if (!navKeys.includes(event.key)) return;
 
@@ -302,10 +326,10 @@ useEventListener(window, 'keydown', (event) => {
   const element = taskInputRefs.value[currentTaskId];
   if (!element) return;
 
-  // Before navigating up or down, store the current X position
+  // Before navigating up or down, store the current X position and direction
   if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
     updateDesiredXPosition();
-    window.__navDirection = event.key === 'ArrowUp' ? 'up' : 'down';
+    navigationDirection.value = event.key === 'ArrowUp' ? 'up' : 'down';
   }
 
   // If the task is empty, always allow up/down navigation
@@ -338,19 +362,6 @@ useEventListener(window, 'keydown', (event) => {
     selectPreviousTask();
   }
 });
-
-/*
-useEventListener(document, 'selectionchange', () => {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-  const node = selection.anchorNode instanceof Element
-    ? selection.anchorNode
-    : selection.anchorNode.parentElement;
-  if (node && node.closest('.task-input')) {
-    updateDesiredXPosition();
-  }
-});
-*/
 </script>
 
 <template>
