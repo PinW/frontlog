@@ -1,10 +1,12 @@
 <template>
   <li
     :class="{ 'bg-highlight': task.id === activeTaskId }"
-    :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
     class="rounded-lg"
   >
-    <div class="flex items-start gap-3 p-2">
+    <div 
+      :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
+      class="flex items-start gap-3 p-2"
+      >
       <input
         type="checkbox"
         :checked="task.completed"
