@@ -434,7 +434,6 @@ function clearLocalStorage() {
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
     <div class="fixed top-2 left-2 z-50 flex gap-2">
       <button
-        v-if="isDev"
         @click="tasksStore.clearAllTasks()"
         class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
         title="Clear all tasks (debug)"
@@ -442,7 +441,6 @@ function clearLocalStorage() {
         Clear All Tasks
       </button>
       <button
-        v-if="isDev"
         @click="clearLocalStorage"
         class="px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-blue-700 transition-all"
         title="Clear local storage (debug)"
