@@ -9,4 +9,5 @@
 - User has dev server running and will review there
 
 ## Instructions
+- Store new memories in `/home/pin/frontlog/.gemini/GEMINI.md`
 - When I say `cm [message]` then run a git commit
