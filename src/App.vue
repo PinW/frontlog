@@ -16,7 +16,9 @@ const {
   toggleTaskCompletion,
   selectNextTask,
   selectPreviousTask,
-  updateTaskText
+  updateTaskText,
+  moveTaskUp,
+  moveTaskDown
 } = tasksStore
 
 // Refs for the editable div elements
@@ -219,6 +221,56 @@ useEventListener(window, 'keydown', (event) => {
         });
         return;
       }
+    }
+  }
+
+  // Handle Ctrl+ArrowUp/Down for reordering tasks
+  if (event.ctrlKey && activeTaskId.value) {
+    // Capture the visual X position before any action
+    updateDesiredXPosition();
+
+    const moveAndRestoreCursor = (moveFn) => {
+      event.preventDefault();
+      moveFn(activeTaskId.value);
+      nextTick(() => {
+        const el = taskInputRefs.value[activeTaskId.value];
+        if (!el || desiredXPosition.value === null) return;
+
+        el.focus();
+        const selection = window.getSelection();
+        if (!selection) return;
+
+        const elRect = el.getBoundingClientRect();
+        const yCoord = elRect.top + elRect.height / 2;
+        let range = null;
+
+        // Cross-browser way to get a range from a point
+        if (document.caretRangeFromPoint) {
+          // Non-standard Chrome/Edge way
+          range = document.caretRangeFromPoint(desiredXPosition.value, yCoord);
+        } else if (document.caretPositionFromPoint) {
+          // Standard Firefox/Safari way
+          const pos = document.caretPositionFromPoint(desiredXPosition.value, yCoord);
+          if (pos) {
+            range = document.createRange();
+            range.setStart(pos.offsetNode, pos.offset);
+          }
+        }
+
+        if (range) {
+          range.collapse(true); // Ensure it's a cursor, not a selection
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+      });
+    };
+
+    if (event.key === 'ArrowUp') {
+      moveAndRestoreCursor(moveTaskUp);
+      return;
+    } else if (event.key === 'ArrowDown') {
+      moveAndRestoreCursor(moveTaskDown);
+      return;
     }
   }
 

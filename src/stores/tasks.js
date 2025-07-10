@@ -109,6 +109,32 @@ export const useTasksStore = defineStore('tasks', () => {
     }
   }
 
+  /**
+   * Moves a task up in the list.
+   * @param {string} taskId - The ID of the task to move.
+   */
+  function moveTaskUp(taskId) {
+    const index = tasks.value.findIndex(task => task.id === taskId)
+    if (index > 0) {
+      const taskToMove = tasks.value[index]
+      tasks.value.splice(index, 1) // Remove task from current position
+      tasks.value.splice(index - 1, 0, taskToMove) // Insert task at new position
+    }
+  }
+
+  /**
+   * Moves a task down in the list.
+   * @param {string} taskId - The ID of the task to move.
+   */
+  function moveTaskDown(taskId) {
+    const index = tasks.value.findIndex(task => task.id === taskId)
+    if (index < tasks.value.length - 1 && index !== -1) {
+      const taskToMove = tasks.value[index]
+      tasks.value.splice(index, 1) // Remove task from current position
+      tasks.value.splice(index + 1, 0, taskToMove) // Insert task at new position
+    }
+  }
+
   // --- RETURN ---
   return {
     tasks,
@@ -123,6 +149,8 @@ export const useTasksStore = defineStore('tasks', () => {
     selectNextTask,
     selectPreviousTask,
     updateTaskText,
+    moveTaskUp,
+    moveTaskDown,
   }
 
 }, {

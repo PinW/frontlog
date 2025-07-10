@@ -8,6 +8,7 @@ export const useHotkeysStore = defineStore('hotkeys', {
       { action: 'Toggle Complete', combo: 'Ctrl+Enter' },
       { action: 'Navigate', combo: 'Arrow Up / Down' },
       { action: 'Delete Task', combo: 'Backspace / Delete' },
+      { action: 'Reorder Task', combo: 'Ctrl+Arrow Up / Down' },
     ],
   }),
   getters: {

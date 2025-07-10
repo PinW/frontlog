@@ -1,6 +1,6 @@
 <template>
-  <div class="fixed bottom-8 right-8 z-50 min-w-[220px] text-[0.98rem] pointer-events-none grayscale">
-    <ul class="grid grid-cols-2 gap-x-4 gap-y-1 list-none p-0 m-0">
+  <div class="fixed bottom-8 right-8 z-50 min-w-[220px] text-[0.98rem] pointer-events-none grayscale opacity-80 hidden md:block">
+    <ul class="grid grid-cols-2 gap-x-4 gap-y-2 list-none p-0 m-0">
       <li
         v-for="hotkey in hotkeyList"
         :key="hotkey.action"
