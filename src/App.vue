@@ -154,13 +154,20 @@ watch(activeTaskId, (newId, oldId) => {
     // Only apply smart X position if we navigated up/down at the top/bottom boundary
     if (desiredXPosition.value !== null && oldId !== null && navigationDirection.value) {
       const elRect = el.getBoundingClientRect();
+
+      // **THE FIX**: Clamp the desired X position to be within the new element's bounds.
+      let targetX = desiredXPosition.value;
+      if (targetX < elRect.left) {
+        targetX = elRect.left;
+      }
+
       let yCoord = elRect.top + 5;
       if (navigationDirection.value === 'up') {
         yCoord = elRect.bottom - 5;
       }
       
       const targetCoords = {
-        x: desiredXPosition.value,
+        x: targetX,
         y: yCoord
       };
       
