@@ -36,7 +36,7 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param {string} text - The content of the new task.
    * If index is -1, inserts at the start.
    */
-  function insertTaskAt(index, text) {
+  function insertTaskAt(index, text, insertAbove = false) {
     const trimmedText = text ? text.trim() : ''
     // Allow empty string for quick-add
     const newTask = {
@@ -47,7 +47,7 @@ export const useTasksStore = defineStore('tasks', () => {
     if (index < 0) {
       tasks.value.unshift(newTask)
     } else {
-      tasks.value.splice(index + 1, 0, newTask)
+      tasks.value.splice(insertAbove ? index : index + 1, 0, newTask)
     }
     return newTask.id
   }

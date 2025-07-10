@@ -72,11 +72,11 @@ function placeCursorAtCoordinates(element, coords) {
 }
 
 // Function to add a new task
-function insertTask() {
+function insertTask(insertAbove = false) {
   // Find the index of the active task
   const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value)
   // Insert a new empty task below the current one (or at the top if none active)
-  const newId = tasksStore.insertTaskAt(currentIndex, '')
+  const newId = tasksStore.insertTaskAt(currentIndex, '', insertAbove)
   // Set the new task as active
   activeTaskId.value = newId
   // Wait for DOM update, then focus the new task's contenteditable div
@@ -186,7 +186,11 @@ useEventListener(window, 'keydown', (event) => {
     if (el && document.activeElement === el) {
       if (!event.shiftKey) {
         event.preventDefault();
-        insertTask();
+        const selection = window.getSelection();
+        const isAtStart = selection.anchorOffset === 0 && selection.focusOffset === 0;
+        const isEmpty = el.innerText.trim() === '';
+
+        insertTask(isAtStart && !isEmpty);
         return;
       }
       // If shiftKey is pressed, allow default (newline)
