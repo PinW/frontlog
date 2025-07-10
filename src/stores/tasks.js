@@ -69,24 +69,21 @@ export const useTasksStore = defineStore('tasks', () => {
   const activeTaskId = ref(null)
 
   // --- GETTERS ---
-  const taskList = computed(() => tasks.value)
-  const taskCount = computed(() => tasks.value.length)
-
   /**
-   * Returns a flat array of all tasks in visual order (preorder traversal).
+   * Returns a flat array of all tasks in visual order (preorder traversal), with metadata.
+   * Each item: { task, parent, level, arr }
    */
-  const flattenedTaskList = computed(() => {
-    function flatten(arr, result = []) {
-      for (const task of arr) {
-        result.push(task)
-        if (task.children && task.children.length) {
-          flatten(task.children, result)
-        }
+  function flatten(arr = tasks.value, parent = null, level = 0, arrRef = tasks.value, result = []) {
+    for (const task of arr) {
+      result.push({ task, parent, level, arr: arrRef })
+      if (task.children && task.children.length) {
+        flatten(task.children, task, level + 1, task.children, result)
       }
-      return result
     }
-    return flatten(tasks.value)
-  })
+    return result
+  }
+
+  const flattenedTaskList = computed(() => flatten())
 
   // --- ACTIONS ---
   /**
@@ -175,9 +172,9 @@ export const useTasksStore = defineStore('tasks', () => {
   function selectNextTask() {
     const flat = flattenedTaskList.value
     if (flat.length === 0) return
-    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value)
+    const currentIndex = flat.findIndex(task => task.task.id === activeTaskId.value)
     const nextIndex = (currentIndex + 1) % flat.length
-    activeTaskId.value = flat[nextIndex].id
+    activeTaskId.value = flat[nextIndex].task.id
   }
 
   /**
@@ -186,9 +183,9 @@ export const useTasksStore = defineStore('tasks', () => {
   function selectPreviousTask() {
     const flat = flattenedTaskList.value
     if (flat.length === 0) return
-    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value)
+    const currentIndex = flat.findIndex(task => task.task.id === activeTaskId.value)
     const previousIndex = (currentIndex - 1 + flat.length) % flat.length
-    activeTaskId.value = flat[previousIndex].id
+    activeTaskId.value = flat[previousIndex].task.id
   }
 
   /**
@@ -204,7 +201,6 @@ export const useTasksStore = defineStore('tasks', () => {
         }
         if (arr[i].children && arr[i].children.length) {
           if (recursiveUpdate(arr[i].children)) {
-            // Force reactivity on the children array
             arr[i].children = [...arr[i].children];
             return true;
           }
@@ -213,7 +209,6 @@ export const useTasksStore = defineStore('tasks', () => {
       return false;
     }
     recursiveUpdate(tasks.value);
-    // Force reactivity on the root array
     tasks.value = [...tasks.value];
   }
 
@@ -244,30 +239,53 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   /**
-   * Nests a task under another task.
+   * Nests a task under the closest previous same-level sibling.
    * @param {string} taskId - The ID of the task to nest.
-   * @param {string} parentId - The ID of the parent task.
    */
-  function nestTask(taskId, parentId) {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (task) {
-      task.parentId = parentId
+  function nestTask(taskId) {
+    const flat = flatten()
+    const idx = flat.findIndex(item => item.task.id === taskId)
+    if (idx <= 0) return // Can't nest first task
+    const current = flat[idx]
+    // Find closest previous same-level sibling
+    for (let i = idx - 1; i >= 0; i--) {
+      if (flat[i].level === current.level) {
+        // Remove from current parent array
+        const arr = current.arr
+        const arrIdx = arr.findIndex(t => t.id === taskId)
+        if (arrIdx !== -1) {
+          const [taskToNest] = arr.splice(arrIdx, 1)
+          // Add as last child of previous sibling
+          flat[i].task.children = flat[i].task.children || []
+          flat[i].task.children.push(taskToNest)
+        }
+        break
+      }
     }
   }
 
   /**
-   * Unnests a task.
+   * Unnests a task (moves it up one level, after its parent).
    * @param {string} taskId - The ID of the task to unnest.
    */
   function unnestTask(taskId) {
-    const task = tasks.value.find(t => t.id === taskId)
-    if (task && task.parentId) {
-      const parentTask = tasks.value.find(t => t.id === task.parentId)
-      if (parentTask) {
-        task.parentId = parentTask.parentId
-      } else {
-        task.parentId = null // Should not happen if parentId is valid, but as a fallback
-      }
+    const flat = flatten()
+    const idx = flat.findIndex(item => item.task.id === taskId)
+    if (idx === -1) return
+    const current = flat[idx]
+    if (!current.parent) return // Already at root
+    // Remove from current parent's children
+    const parentArr = current.arr
+    const arrIdx = parentArr.findIndex(t => t.id === taskId)
+    if (arrIdx === -1) return
+    const [taskToUnnest] = parentArr.splice(arrIdx, 1)
+    // Insert after parent in parent's parent array
+    const parentMeta = flat.find(item => item.task.id === current.parent.id)
+    if (!parentMeta) return
+    const grandArr = parentMeta.arr
+    const parentIdx = grandArr.findIndex(t => t.id === current.parent.id)
+    if (parentIdx !== -1) {
+      grandArr.splice(parentIdx + 1, 0, taskToUnnest)
     }
   }
 
@@ -275,8 +293,8 @@ export const useTasksStore = defineStore('tasks', () => {
   return {
     tasks,
     activeTaskId,
-    taskList,
-    taskCount,
+    taskList: computed(() => tasks.value),
+    taskCount: computed(() => tasks.value.length),
     flattenedTaskList,
     insertTaskAfter,
     removeTask,
