@@ -288,8 +288,10 @@ useEventListener(window, 'keydown', (event) => {
     }
   }
 
-  // Handle Tab for nesting and Shift+Tab for unnesting
-  if (event.key === 'Tab' && activeTaskId.value) {
+  // Handle Tab for nesting and Shift+Tab for unnesting, and Ctrl+ArrowRight/Left for the same actions
+  if ((event.key === 'Tab' && activeTaskId.value) ||
+      (event.key === 'ArrowRight' && event.ctrlKey && activeTaskId.value) ||
+      (event.key === 'ArrowLeft' && event.ctrlKey && activeTaskId.value)) {
     event.preventDefault();
 
     let relativePos = null;
@@ -309,9 +311,9 @@ useEventListener(window, 'keydown', (event) => {
     }
 
     // Perform the nest or unnest action
-    if (event.shiftKey) {
+    if ((event.key === 'Tab' && event.shiftKey) || event.key === 'ArrowLeft') {
       unnestTask(activeTaskId.value);
-    } else {
+    } else if (event.key === 'Tab' || event.key === 'ArrowRight') {
       nestTask(activeTaskId.value);
     }
 

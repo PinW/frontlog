@@ -217,11 +217,13 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param {string} taskId - The ID of the task to move.
    */
   function moveTaskUp(taskId) {
-    const index = tasks.value.findIndex(task => task.id === taskId)
-    if (index > 0) {
-      const taskToMove = tasks.value[index]
-      tasks.value.splice(index, 1) // Remove task from current position
-      tasks.value.splice(index - 1, 0, taskToMove) // Insert task at new position
+    const flat = flatten();
+    const meta = flat.find(item => item.task.id === taskId);
+    if (!meta) return;
+    const arr = meta.arr;
+    const idx = arr.findIndex(t => t.id === taskId);
+    if (idx > 0) {
+      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
     }
   }
 
@@ -230,11 +232,13 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param {string} taskId - The ID of the task to move.
    */
   function moveTaskDown(taskId) {
-    const index = tasks.value.findIndex(task => task.id === taskId)
-    if (index < tasks.value.length - 1 && index !== -1) {
-      const taskToMove = tasks.value[index]
-      tasks.value.splice(index, 1) // Remove task from current position
-      tasks.value.splice(index + 1, 0, taskToMove) // Insert task at new position
+    const flat = flatten();
+    const meta = flat.find(item => item.task.id === taskId);
+    if (!meta) return;
+    const arr = meta.arr;
+    const idx = arr.findIndex(t => t.id === taskId);
+    if (idx !== -1 && idx < arr.length - 1) {
+      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
     }
   }
 
