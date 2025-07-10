@@ -68,6 +68,7 @@ export const useTasksStore = defineStore('tasks', () => {
     const task = tasks.value.find(task => task.id === taskId)
     if (task) {
       task.completed = !task.completed
+      task.completionDate = task.completed ? new Date().toISOString() : null
     }
   }
 
