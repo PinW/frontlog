@@ -11,7 +11,7 @@
           <template v-for="(part, index) in hotkey.combo" :key="index">
             <kbd 
               v-if="part !== '/' && part !== '+' && part !== 'or'"
-              class="bg-gray-100 text-gray-600 rounded border border-gray-300 px-1.5 py-0.5 text-[0.95em] font-sans shadow-sm whitespace-nowrap"
+              class="bg-gray-100 text-gray-600 rounded border border-gray-300 px-1.5 py-0.5 text-[0.95em] font-sans shadow-[1px_1px_0_rgba(0,0,0,0.05)] whitespace-nowrap"
             >
               <span v-html="part"></span>
             </kbd>
