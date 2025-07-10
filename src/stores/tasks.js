@@ -6,50 +6,122 @@ import { v4 as uuidv4 } from 'uuid'
 export const useTasksStore = defineStore('tasks', () => {
   // --- STATE ---
   // State is now defined with ref()
-  const tasks = ref([])
+  const tasks = ref([
+    {
+      id: '1',
+      text: 'Project Alpha',
+      completed: false,
+      children: [
+        {
+          id: '1-1',
+          text: 'Design',
+          completed: false,
+          children: [
+            {
+              id: '1-1-1',
+              text: 'Wireframes',
+              completed: false,
+              children: []
+            },
+            {
+              id: '1-1-2',
+              text: 'Mockups',
+              completed: false,
+              children: []
+            }
+          ]
+        },
+        {
+          id: '1-2',
+          text: 'Development',
+          completed: false,
+          children: [
+            {
+              id: '1-2-1',
+              text: 'Frontend',
+              completed: false,
+              children: []
+            },
+            {
+              id: '1-2-2',
+              text: 'Backend',
+              completed: false,
+              children: []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      id: '2',
+      text: 'Project Beta',
+      completed: false,
+      children: [
+        {
+          id: '2-1',
+          text: 'Research',
+          completed: false,
+          children: []
+        }
+      ]
+    }
+  ])
   const activeTaskId = ref(null)
 
   // --- GETTERS ---
   const taskList = computed(() => tasks.value)
   const taskCount = computed(() => tasks.value.length)
 
+  /**
+   * Returns a flat array of all tasks in visual order (preorder traversal).
+   */
+  const flattenedTaskList = computed(() => {
+    function flatten(arr, result = []) {
+      for (const task of arr) {
+        result.push(task)
+        if (task.children && task.children.length) {
+          flatten(task.children, result)
+        }
+      }
+      return result
+    }
+    return flatten(tasks.value)
+  })
+
   // --- ACTIONS ---
   /**
-   * Adds a new task to the list.
+   * Inserts a new task after the given task ID at the same hierarchy level.
+   * If prevTaskId is null, inserts at the start of the root.
+   * @param {string|null} prevTaskId - The ID of the task after which to insert, or null for root start.
    * @param {string} text - The content of the new task.
+   * @returns {string} The new task's ID.
    */
-  function addTask(text) {
+  function insertTaskAfter(prevTaskId, text) {
     const trimmedText = text ? text.trim() : ''
-    if (!trimmedText) return
-
-    // All state access must use .value
-    tasks.value.unshift({
-      id: uuidv4(),
-      text: trimmedText,
-      completed: false
-    })
-  }
-
-  /**
-   * Inserts a new task at a specific index in the list.
-   * @param {number} index - The index after which to insert the new task.
-   * @param {string} text - The content of the new task.
-   * If index is -1, inserts at the start.
-   */
-  function insertTaskAt(index, text, insertAbove = false) {
-    const trimmedText = text ? text.trim() : ''
-    // Allow empty string for quick-add
     const newTask = {
       id: uuidv4(),
       text: trimmedText,
       completed: false,
-      parentId: null
+      children: []
     }
-    if (index < 0) {
+    if (!prevTaskId) {
       tasks.value.unshift(newTask)
-    } else {
-      tasks.value.splice(insertAbove ? index : index + 1, 0, newTask)
+      return newTask.id
     }
+    // Helper to recursively find and insert after prevTaskId
+    function recursiveInsert(arr) {
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i].id === prevTaskId) {
+          arr.splice(i + 1, 0, newTask)
+          return true
+        }
+        if (arr[i].children && arr[i].children.length) {
+          if (recursiveInsert(arr[i].children)) return true
+        }
+      }
+      return false
+    }
+    recursiveInsert(tasks.value)
     return newTask.id
   }
 
@@ -58,7 +130,24 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param {string} taskId - The ID of the task to remove.
    */
   function removeTask(taskId) {
-    tasks.value = tasks.value.filter(task => task.id !== taskId)
+    function recursiveRemove(arr) {
+      const idx = arr.findIndex(task => task.id === taskId)
+      if (idx !== -1) {
+        const [removed] = arr.splice(idx, 1)
+        if (removed && removed.children && removed.children.length) {
+          // Insert children after the removed task's position
+          arr.splice(idx, 0, ...removed.children)
+        }
+        return true
+      }
+      for (const task of arr) {
+        if (task.children && task.children.length) {
+          if (recursiveRemove(task.children)) return true
+        }
+      }
+      return false
+    }
+    recursiveRemove(tasks.value)
   }
 
   /**
@@ -81,23 +170,25 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   /**
-   * Selects the next task in the list.
+   * Selects the next task in the flattened list.
    */
   function selectNextTask() {
-    if (tasks.value.length === 0) return
-    const currentIndex = tasks.value.findIndex(task => task.id === activeTaskId.value)
-    const nextIndex = (currentIndex + 1) % tasks.value.length
-    activeTaskId.value = tasks.value[nextIndex].id
+    const flat = flattenedTaskList.value
+    if (flat.length === 0) return
+    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value)
+    const nextIndex = (currentIndex + 1) % flat.length
+    activeTaskId.value = flat[nextIndex].id
   }
 
   /**
-   * Selects the previous task in the list.
+   * Selects the previous task in the flattened list.
    */
   function selectPreviousTask() {
-    if (tasks.value.length === 0) return
-    const currentIndex = tasks.value.findIndex(task => task.id === activeTaskId.value)
-    const previousIndex = (currentIndex - 1 + tasks.value.length) % tasks.value.length
-    activeTaskId.value = tasks.value[previousIndex].id
+    const flat = flattenedTaskList.value
+    if (flat.length === 0) return
+    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value)
+    const previousIndex = (currentIndex - 1 + flat.length) % flat.length
+    activeTaskId.value = flat[previousIndex].id
   }
 
   /**
@@ -105,10 +196,25 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param { {id: string, newText: string} } payload
    */
   function updateTaskText({ id, newText }) {
-    const task = tasks.value.find(task => task.id === id)
-    if (task) {
-      task.text = newText
+    function recursiveUpdate(arr) {
+      for (let i = 0; i < arr.length; i++) {
+        if (arr[i].id === id) {
+          arr[i].text = newText;
+          return true;
+        }
+        if (arr[i].children && arr[i].children.length) {
+          if (recursiveUpdate(arr[i].children)) {
+            // Force reactivity on the children array
+            arr[i].children = [...arr[i].children];
+            return true;
+          }
+        }
+      }
+      return false;
     }
+    recursiveUpdate(tasks.value);
+    // Force reactivity on the root array
+    tasks.value = [...tasks.value];
   }
 
   /**
@@ -171,8 +277,8 @@ export const useTasksStore = defineStore('tasks', () => {
     activeTaskId,
     taskList,
     taskCount,
-    addTask,
-    insertTaskAt,
+    flattenedTaskList,
+    insertTaskAfter,
     removeTask,
     toggleTaskCompletion,
     clearAllTasks,

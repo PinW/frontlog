@@ -4,16 +4,17 @@ import { useTasksStore } from './stores/tasks'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
 import HotkeyHelper from './components/HotkeyHelper.vue'
+import TaskItem from './components/TaskItem.vue'
 
 // Add import for process.env if needed (Vite exposes import.meta.env)
 const isDev = import.meta.env.MODE === 'development'
 
 // Initialize the store
 const tasksStore = useTasksStore()
-const { taskList, taskCount, activeTaskId } = storeToRefs(tasksStore)
+const { taskList, taskCount, activeTaskId, flattenedTaskList } = storeToRefs(tasksStore)
 const {
   addTask,
-  insertTaskAt,
+  insertTaskAfter,
   removeTask,
   toggleTaskCompletion,
   selectNextTask,
@@ -88,17 +89,25 @@ function placeCursorAtCoordinates(element, coords) {
 
 // Function to add a new task
 function insertTask(insertAbove = false) {
-  // Find the index of the active task
-  const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value)
-  // Insert a new empty task below the current one (or at the top if none active)
-  const newId = tasksStore.insertTaskAt(currentIndex, '', insertAbove)
-  // Set the new task as active
-  activeTaskId.value = newId
-  // Wait for DOM update, then focus the new task's contenteditable div
+  let prevTaskId = null;
+  if (activeTaskId.value) {
+    const flat = taskList.value;
+    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value);
+    if (insertAbove) {
+      // Insert above: find the previous task in the flat list
+      prevTaskId = currentIndex > 0 ? flat[currentIndex - 1].id : null;
+    } else {
+      // Insert below: use the current task as previous
+      prevTaskId = activeTaskId.value;
+    }
+  }
+  // If no active task, insert at root start
+  const newId = tasksStore.insertTaskAfter(prevTaskId, '');
+  activeTaskId.value = newId;
   nextTick(() => {
-    const el = taskInputRefs.value[newId]
-    if (el) el.focus()
-  })
+    const el = taskInputRefs.value[newId];
+    if (el) el.focus();
+  });
 }
 
 // **LIFECYCLE HOOKS FOR REF MANAGEMENT**
@@ -113,7 +122,7 @@ onBeforeUpdate(() => {
 onMounted(() => {
   // Seed an empty task if there are no tasks
   if (taskList.value.length === 0) {
-    const newId = tasksStore.insertTaskAt(-1, '')
+    const newId = tasksStore.insertTaskAfter(null, '')
     activeTaskId.value = newId
     nextTick(() => {
       const el = taskInputRefs.value[newId]
@@ -222,27 +231,27 @@ useEventListener(window, 'keydown', (event) => {
   if (event.key === 'Backspace' || event.key === 'Delete') {
     if (activeTaskId.value) {
       const element = taskInputRefs.value[activeTaskId.value];
-      const currentIndex = taskList.value.findIndex(task => task.id === activeTaskId.value);
+      const currentIndex = flattenedTaskList.value.findIndex(task => task.id === activeTaskId.value);
 
       // Prevent deletion if only one task remains
-      if (element && element.innerText.trim() === '' && taskList.value.length > 1) {
+      if (element && element.innerText.trim() === '' && flattenedTaskList.value.length > 1) {
         event.preventDefault();
 
         // Determine the next active task
         let newActiveTaskId = null;
-        if (taskList.value.length > 1) {
+        if (flattenedTaskList.value.length > 1) {
           if (event.key === 'Delete') {
             // Focus next task if possible, otherwise previous
-            if (currentIndex < taskList.value.length - 1) {
-              newActiveTaskId = taskList.value[currentIndex + 1].id;
+            if (currentIndex < flattenedTaskList.value.length - 1) {
+              newActiveTaskId = flattenedTaskList.value[currentIndex + 1].id;
             } else if (currentIndex > 0) {
-              newActiveTaskId = taskList.value[currentIndex - 1].id;
+              newActiveTaskId = flattenedTaskList.value[currentIndex - 1].id;
             }
           } else { // Backspace
             if (currentIndex > 0) {
-              newActiveTaskId = taskList.value[currentIndex - 1].id;
+              newActiveTaskId = flattenedTaskList.value[currentIndex - 1].id;
             } else {
-              newActiveTaskId = taskList.value[1].id;
+              newActiveTaskId = flattenedTaskList.value[1].id;
             }
           }
         }
@@ -441,46 +450,46 @@ useEventListener(window, 'keydown', (event) => {
     selectPreviousTask();
   }
 });
+
+function clearLocalStorage() {
+  localStorage.clear();
+  location.reload();
+}
 </script>
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
-    <button
-      v-if="isDev"
-      @click="tasksStore.clearAllTasks()"
-      class="fixed top-2 left-2 z-50 px-3 py-1 rounded bg-red-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
-      title="Clear all tasks (debug)"
-    >
-      Clear All Tasks
-    </button>
+    <div class="fixed top-2 left-2 z-50 flex gap-2">
+      <button
+        v-if="isDev"
+        @click="tasksStore.clearAllTasks()"
+        class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
+        title="Clear all tasks (debug)"
+      >
+        Clear All Tasks
+      </button>
+      <button
+        v-if="isDev"
+        @click="clearLocalStorage"
+        class="px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-blue-700 transition-all"
+        title="Clear local storage (debug)"
+      >
+        Clear Local Storage
+      </button>
+    </div>
     <div class="w-full max-w-md">
       <ul v-if="taskCount > 0" class="space-y-1">
-        <li
+        <TaskItem
           v-for="task in taskList"
           :key="task.id"
-          class="flex items-start gap-3 p-2 rounded-lg"
-          :class="{ 'bg-highlight': task.id === activeTaskId }"
-          :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
-        >
-          <input
-            type="checkbox"
-            :checked="task.completed"
-            @change="toggleTaskCompletion(task.id)"
-            class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
-            :style="{ accentColor: 'var(--color-primary)' }"
-          />
-          <div
-            :ref="(el) => { if (el) taskInputRefs[task.id] = el }"
-            :contenteditable="true"
-            @input="onTaskInput(task, $event)"
-            @focus="activeTaskId = task.id"
-            @click="updateDesiredXPosition"
-            @blur="(event) => { onTaskInput(task, event); activeTaskId = null }"
-            class="task-input w-full bg-transparent text-lg resize-none overflow-hidden editable"
-            :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
-          >
-          </div>
-        </li>
+          :task="task"
+          :activeTaskId="activeTaskId"
+          :taskInputRefs="taskInputRefs"
+          :getTaskIndentation="getTaskIndentation"
+          :toggleTaskCompletion="toggleTaskCompletion"
+          :onTaskInput="onTaskInput"
+          :updateDesiredXPosition="updateDesiredXPosition"
+        />
       </ul>
     </div>
     <HotkeyHelper />
