@@ -109,75 +109,71 @@ export const useTasksStore = defineStore('tasks', () => {
 
   // --- ACTIONS ---
   /**
-   * Inserts a new task after the given task ID at the same hierarchy level.
-   * If prevTaskId is null, inserts at the start of the root.
-   * @param {string|null} prevTaskId - The ID of the task after which to insert, or null for root start.
-   * @param {string} text - The content of the new task.
+   * Creates and inserts a new task.
+   * @param {{text: string, relativeToId: string|null, position: 'before'|'after'}} payload
    * @returns {string} The new task's ID.
    */
-  function insertTaskAfter(prevTaskId, text) {
-    const trimmedText = text ? text.trim() : ''
+  function createTask({ text, relativeToId = null, position = 'after' }) {
     const newTask = {
       id: uuidv4(),
-      text: trimmedText,
+      text: text ? text.trim() : '',
       completed: false,
       children: []
+    };
+
+    // If there's no task to be relative to, insert at the top of the root.
+    if (!relativeToId) {
+      tasks.value.unshift(newTask);
+      return newTask.id;
     }
-    if (!prevTaskId) {
-      tasks.value.unshift(newTask)
-      return newTask.id
+
+    // Find the task we're inserting relative to.
+    const meta = findTaskMeta(relativeToId);
+    if (!meta) {
+      // As a fallback, if the relative task isn't found, add to the root.
+      tasks.value.push(newTask);
+      return newTask.id;
     }
-    // Helper to recursively find and insert after prevTaskId
-    function recursiveInsert(arr) {
-      for (let i = 0; i < arr.length; i++) {
-        if (arr[i].id === prevTaskId) {
-          arr.splice(i + 1, 0, newTask)
-          return true
-        }
-        if (arr[i].children && arr[i].children.length) {
-          if (recursiveInsert(arr[i].children)) return true
-        }
-      }
-      return false
+
+    if (position === 'after') {
+      // Insert into the same list, right after the relative task.
+      meta.siblings.splice(meta.index + 1, 0, newTask);
+    } else if (position === 'before') {
+      // Insert into the same list, right before the relative task.
+      meta.siblings.splice(meta.index, 0, newTask);
     }
-    recursiveInsert(tasks.value)
-    return newTask.id
+
+    return newTask.id;
   }
 
-  /**
+ /**
    * Removes a task from the list by its ID.
    * @param {string} taskId - The ID of the task to remove.
    */
-  function removeTask(taskId) {
-    function recursiveRemove(arr) {
-      const idx = arr.findIndex(task => task.id === taskId)
-      if (idx !== -1) {
-        const [removed] = arr.splice(idx, 1)
-        if (removed && removed.children && removed.children.length) {
-          // Insert children after the removed task's position
-          arr.splice(idx, 0, ...removed.children)
-        }
-        return true
-      }
-      for (const task of arr) {
-        if (task.children && task.children.length) {
-          if (recursiveRemove(task.children)) return true
-        }
-      }
-      return false
+ function removeTask(taskId) {
+    const meta = findTaskMeta(taskId);
+    if (!meta) return;
+
+    const { task, siblings, index } = meta;
+    
+    // Remove the task from its array
+    siblings.splice(index, 1);
+
+    // If the removed task has children, insert them into the same array
+    if (task.children && task.children.length > 0) {
+      siblings.splice(index, 0, ...task.children);
     }
-    recursiveRemove(tasks.value)
   }
 
-  /**
+ /**
    * Toggles the 'completed' status of a task.
    * @param {string} taskId - The ID of the task to toggle.
    */
   function toggleTaskCompletion(taskId) {
-    const task = tasks.value.find(task => task.id === taskId)
-    if (task) {
-      task.completed = !task.completed
-      task.completionDate = task.completed ? new Date().toISOString() : null
+    const meta = findTaskMeta(taskId);
+    if (meta && meta.task) {
+      meta.task.completed = !meta.task.completed;
+      meta.task.completionDate = meta.task.completed ? new Date().toISOString() : null;
     }
   }
 
@@ -215,23 +211,10 @@ export const useTasksStore = defineStore('tasks', () => {
    * @param { {id: string, newText: string} } payload
    */
   function updateTaskText({ id, newText }) {
-    function recursiveUpdate(arr) {
-      for (let i = 0; i < arr.length; i++) {
-        if (arr[i].id === id) {
-          arr[i].text = newText;
-          return true;
-        }
-        if (arr[i].children && arr[i].children.length) {
-          if (recursiveUpdate(arr[i].children)) {
-            arr[i].children = [...arr[i].children];
-            return true;
-          }
-        }
-      }
-      return false;
+    const meta = findTaskMeta(id);
+    if (meta && meta.task) {
+      meta.task.text = newText;
     }
-    recursiveUpdate(tasks.value);
-    tasks.value = [...tasks.value];
   }
 
   /**
@@ -364,7 +347,7 @@ export const useTasksStore = defineStore('tasks', () => {
     taskList: computed(() => tasks.value),
     taskCount: computed(() => tasks.value.length),
     flattenedTaskList,
-    insertTaskAfter,
+    createTask,
     removeTask,
     toggleTaskCompletion,
     clearAllTasks,

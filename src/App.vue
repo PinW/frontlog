@@ -19,8 +19,7 @@ const settingsStore = useSettingsStore()
 const { spellcheckEnabled } = storeToRefs(settingsStore)
 
 const {
-  addTask,
-  insertTaskAfter,
+  createTask,
   removeTask,
   toggleTaskCompletion,
   selectNextTask,
@@ -93,22 +92,72 @@ function placeCursorAtCoordinates(element, coords) {
   }
 }
 
-// Function to add a new task
-function insertTask(insertAbove = false) {
-  let prevTaskId = null;
-  if (activeTaskId.value) {
-    const flat = taskList.value;
-    const currentIndex = flat.findIndex(task => task.id === activeTaskId.value);
-    if (insertAbove) {
-      // Insert above: find the previous task in the flat list
-      prevTaskId = currentIndex > 0 ? flat[currentIndex - 1].id : null;
-    } else {
-      // Insert below: use the current task as previous
-      prevTaskId = activeTaskId.value;
+/**
+ * Executes a task store action while preserving the cursor position.
+ * Handles both normal and empty tasks.
+ * @param {Function} actionFn - The store action to execute (e.g., () => moveTaskUp(activeTaskId.value)).
+ */
+ function performTaskActionAndPreserveCursor(actionFn) {
+  let relativePos = null;
+  const selection = window.getSelection();
+  const element = taskInputRefs.value[activeTaskId.value];
+  
+  if (!element) return;
+
+  const isEmpty = element.innerText.trim() === '';
+
+  // 1. Capture the relative visual position, but only if not empty
+  if (!isEmpty && selection && selection.rangeCount > 0) {
+    const cursorRect = selection.getRangeAt(0).getClientRects()[0];
+    const elementRect = element.getBoundingClientRect();
+    if (cursorRect) {
+      relativePos = {
+        x: cursorRect.left - elementRect.left,
+        y: cursorRect.top - elementRect.top,
+      };
     }
   }
-  // If no active task, insert at root start
-  const newId = tasksStore.insertTaskAfter(prevTaskId, '');
+
+  // 2. Perform the actual store action
+  actionFn();
+
+  // 3. After the DOM update, restore the cursor's position
+  nextTick(() => {
+    syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
+    const el = taskInputRefs.value[activeTaskId.value];
+    if (!el) return;
+
+    el.focus(); // Always focus the element
+
+    // If it wasn't empty and we have a position, restore it
+    if (!isEmpty && relativePos) {
+      const elRect = el.getBoundingClientRect();
+      const absoluteCoords = {
+        x: elRect.left + relativePos.x,
+        y: elRect.top + relativePos.y,
+      };
+      placeCursorAtCoordinates(el, absoluteCoords);
+    } else if (isEmpty) {
+      // For empty elements, just place the cursor at the start
+      const range = document.createRange();
+      const sel = window.getSelection();
+      range.setStart(el, 0);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+  });
+}
+
+// Function to add a new task
+function insertTask(insertAbove = false) {
+  const newId = tasksStore.createTask({
+    text: '',
+    relativeToId: activeTaskId.value,
+    position: insertAbove ? 'before' : 'after'
+  });
+
+  // Set the new task as active and focus it.
   activeTaskId.value = newId;
   nextTick(() => {
     const el = taskInputRefs.value[newId];
@@ -152,7 +201,7 @@ onMounted(() => {
   });
   // Seed an empty task if there are no tasks
   if (taskList.value.length === 0) {
-    const newId = tasksStore.insertTaskAfter(null, '')
+    const newId = tasksStore.createTask({ text: '', relativeToId: null, position: 'after' });
     activeTaskId.value = newId
     nextTick(() => {
       const el = taskInputRefs.value[newId]
@@ -257,8 +306,11 @@ useEventListener(window, 'keydown', (event) => {
       const flat = flattenedTaskList.value;
       const currentIndex = flat.findIndex(item => item.task.id === activeTaskId.value);
       let newActiveTaskId = null;
+
+      // This logic only runs when deleting an EMPTY task
       if (element && element.innerText.trim() === '' && flat.length > 1) {
         event.preventDefault();
+        
         if (event.key === 'Delete') {
           // Next in list, or previous if at the end
           if (currentIndex < flat.length - 1) {
@@ -274,16 +326,18 @@ useEventListener(window, 'keydown', (event) => {
             newActiveTaskId = flat[1].task.id;
           }
         }
+
         // Remove the task
         removeTask(activeTaskId.value);
+        
         // Set the new active task
         activeTaskId.value = newActiveTaskId ?? null;
-        // Clear selection before removal
-        const sel = window.getSelection();
-        if (sel) sel.removeAllRanges();
+        
         nextTick(() => {
-          const sel2 = window.getSelection();
-          if (sel2) sel2.removeAllRanges();
+          // --- THIS IS THE FIX ---
+          // Sync all text from the store to the DOM before focusing
+          syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
+
           if (activeTaskId.value && taskInputRefs.value[activeTaskId.value]) {
             const elToFocus = taskInputRefs.value[activeTaskId.value];
             elToFocus.focus();
@@ -296,120 +350,25 @@ useEventListener(window, 'keydown', (event) => {
 
   // Handle Tab for nesting and Shift+Tab for unnesting, and Ctrl+ArrowRight/Left for the same actions
   if ((event.key === 'Tab' && activeTaskId.value) ||
-      (event.key === 'ArrowRight' && event.ctrlKey && activeTaskId.value) ||
-      (event.key === 'ArrowLeft' && event.ctrlKey && activeTaskId.value)) {
+      (event.ctrlKey && activeTaskId.value && (event.key === 'ArrowRight' || event.key === 'ArrowLeft'))) {
     event.preventDefault();
-
-    let relativePos = null;
-    const selection = window.getSelection();
-    const element = taskInputRefs.value[activeTaskId.value];
-    const isEmpty = element && element.innerText.trim() === '';
-
-    // Capture the relative visual position before the action, but only if not empty
-    if (!isEmpty && selection && selection.rangeCount > 0 && element) {
-      const cursorRect = selection.getRangeAt(0).getClientRects()[0];
-      const elementRect = element.getBoundingClientRect();
-      if (cursorRect) {
-        relativePos = {
-          x: cursorRect.left - elementRect.left,
-          y: cursorRect.top - elementRect.top,
-        };
-      }
-    }
-
-    // Perform the nest or unnest action
-    if ((event.key === 'Tab' && event.shiftKey) || event.key === 'ArrowLeft') {
-      unnestTask(activeTaskId.value);
-    } else if (event.key === 'Tab' || event.key === 'ArrowRight') {
-      nestTask(activeTaskId.value);
-    }
-
-    // After the DOM update, restore the cursor's position
-    nextTick(() => {
-      syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
-      const el = taskInputRefs.value[activeTaskId.value];
-      if (!el) return;
-
-      el.focus(); // Always focus the element
-
-      // If not empty and we have a position, restore it
-      if (!isEmpty && relativePos) {
-        const elRect = el.getBoundingClientRect();
-        const absoluteCoords = {
-          x: elRect.left + relativePos.x,
-          y: elRect.top + relativePos.y,
-        };
-        placeCursorAtCoordinates(el, absoluteCoords);
-      } else if (isEmpty) {
-        // For empty elements, just place the cursor at the start
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.setStart(el, 0);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
-    });
+    const action = (event.shiftKey || event.key === 'ArrowLeft')
+      ? () => unnestTask(activeTaskId.value)
+      : () => nestTask(activeTaskId.value);
+    performTaskActionAndPreserveCursor(action);
     return;
   }
 
   // Handle Ctrl+ArrowUp/Down for reordering tasks
-  if (event.ctrlKey && activeTaskId.value) {
-    let relativePos = null;
-    const selection = window.getSelection();
-    const element = taskInputRefs.value[activeTaskId.value];
-
-    // Capture the relative visual position before any action
-    if (selection && selection.rangeCount > 0 && element) {
-      const cursorRect = selection.getRangeAt(0).getClientRects()[0];
-      const elementRect = element.getBoundingClientRect();
-      if (cursorRect) {
-        relativePos = {
-          x: cursorRect.left - elementRect.left,
-          y: cursorRect.top - elementRect.top,
-        };
-      }
-    }
-
-    if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      moveTaskUp(activeTaskId.value);
-      nextTick(() => {
-        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
-        const el = taskInputRefs.value[activeTaskId.value];
-        if (!el || !relativePos) return;
-
-        el.focus();
-        const elRect = el.getBoundingClientRect();
-        // Calculate the new absolute screen position from the stored relative position
-        const absoluteCoords = {
-          x: elRect.left + relativePos.x,
-          y: elRect.top + relativePos.y,
-        };
-        placeCursorAtCoordinates(el, absoluteCoords);
-      });
-      return;
-    } else if (event.key === 'ArrowDown') {
-      event.preventDefault();
-      moveTaskDown(activeTaskId.value);
-      nextTick(() => {
-        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
-        const el = taskInputRefs.value[activeTaskId.value];
-        if (!el || !relativePos) return;
-
-        el.focus();
-        const elRect = el.getBoundingClientRect();
-        // Calculate the new absolute screen position from the stored relative position
-        const absoluteCoords = {
-          x: elRect.left + relativePos.x,
-          y: elRect.top + relativePos.y,
-        };
-        placeCursorAtCoordinates(el, absoluteCoords);
-      });
-      return;
-    }
+  if (event.ctrlKey && activeTaskId.value && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
+    event.preventDefault();
+    const action = event.key === 'ArrowUp'
+      ? () => moveTaskUp(activeTaskId.value)
+      : () => moveTaskDown(activeTaskId.value);
+    performTaskActionAndPreserveCursor(action);
+    return;
   }
-  
+ 
   // Navigational keys
   if (!navKeys.includes(event.key)) return;
 
