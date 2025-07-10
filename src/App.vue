@@ -356,6 +356,7 @@ useEventListener(window, 'keydown', (event) => {
       event.preventDefault();
       moveTaskUp(activeTaskId.value);
       nextTick(() => {
+        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
         const el = taskInputRefs.value[activeTaskId.value];
         if (!el || !relativePos) return;
 
@@ -373,6 +374,7 @@ useEventListener(window, 'keydown', (event) => {
       event.preventDefault();
       moveTaskDown(activeTaskId.value);
       nextTick(() => {
+        syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
         const el = taskInputRefs.value[activeTaskId.value];
         if (!el || !relativePos) return;
 

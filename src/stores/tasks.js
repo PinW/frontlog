@@ -218,13 +218,37 @@ export const useTasksStore = defineStore('tasks', () => {
    */
   function moveTaskUp(taskId) {
     const flat = flatten();
-    const meta = flat.find(item => item.task.id === taskId);
-    if (!meta) return;
+    const idx = flat.findIndex(item => item.task.id === taskId);
+    if (idx === -1) return;
+    const meta = flat[idx];
     const arr = meta.arr;
-    const idx = arr.findIndex(t => t.id === taskId);
-    if (idx > 0) {
-      [arr[idx - 1], arr[idx]] = [arr[idx], arr[idx - 1]];
+    const arrIdx = arr.findIndex(t => t.id === taskId);
+    if (arrIdx > 0) {
+      // Swap with previous sibling
+      [arr[arrIdx - 1], arr[arrIdx]] = [arr[arrIdx], arr[arrIdx - 1]];
+      return;
     }
+    // At first sibling
+    if (!meta.parent) return; // Already at root, can't go higher
+    // Find parent's meta
+    const parentMeta = flat.find(item => item.task.id === meta.parent.id);
+    if (!parentMeta) return;
+    const parentArr = parentMeta.arr;
+    const parentIdx = parentArr.findIndex(t => t.id === meta.parent.id);
+    // Check for parent's previous sibling
+    if (parentIdx > 0) {
+      // Move to end of previous sibling's children
+      const prevSibling = parentArr[parentIdx - 1];
+      prevSibling.children = prevSibling.children || [];
+      // Remove from current
+      arr.splice(arrIdx, 1);
+      prevSibling.children.push(meta.task);
+      return;
+    }
+    // No parent's previous sibling: unnest and insert before parent
+    // Remove from current
+    arr.splice(arrIdx, 1);
+    parentArr.splice(parentIdx, 0, meta.task);
   }
 
   /**
@@ -233,13 +257,37 @@ export const useTasksStore = defineStore('tasks', () => {
    */
   function moveTaskDown(taskId) {
     const flat = flatten();
-    const meta = flat.find(item => item.task.id === taskId);
-    if (!meta) return;
+    const idx = flat.findIndex(item => item.task.id === taskId);
+    if (idx === -1) return;
+    const meta = flat[idx];
     const arr = meta.arr;
-    const idx = arr.findIndex(t => t.id === taskId);
-    if (idx !== -1 && idx < arr.length - 1) {
-      [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+    const arrIdx = arr.findIndex(t => t.id === taskId);
+    if (arrIdx < arr.length - 1) {
+      // Swap with next sibling
+      [arr[arrIdx], arr[arrIdx + 1]] = [arr[arrIdx + 1], arr[arrIdx]];
+      return;
     }
+    // At last sibling
+    if (!meta.parent) return; // Already at root, can't go lower
+    // Find parent's meta
+    const parentMeta = flat.find(item => item.task.id === meta.parent.id);
+    if (!parentMeta) return;
+    const parentArr = parentMeta.arr;
+    const parentIdx = parentArr.findIndex(t => t.id === meta.parent.id);
+    // Check for parent's next sibling
+    if (parentIdx < parentArr.length - 1) {
+      // Move to start of next sibling's children
+      const nextSibling = parentArr[parentIdx + 1];
+      nextSibling.children = nextSibling.children || [];
+      // Remove from current
+      arr.splice(arrIdx, 1);
+      nextSibling.children.unshift(meta.task);
+      return;
+    }
+    // No parent's next sibling: unnest one level (insert after parent)
+    // Remove from current
+    arr.splice(arrIdx, 1);
+    parentArr.splice(parentIdx + 1, 0, meta.task);
   }
 
   /**
