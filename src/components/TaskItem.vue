@@ -43,7 +43,8 @@
       tag="ul"
       group="tasks"
       handle=".drag-handle"
-    >
+      :move="onDragMove"
+      >
       <template #item="{ element: child }">
         <TaskItem
           :key="child.id"
@@ -56,6 +57,7 @@
           :onFocus="onFocus"
           :onBlur="onBlur"
           :updateDesiredXPosition="updateDesiredXPosition"
+          :onDragMove="onDragMove"
         />
       </template>
     </draggable>
@@ -77,6 +79,7 @@ const props = defineProps({
   onFocus: { type: Function, required: true },
   onBlur: { type: Function, required: true },
   updateDesiredXPosition: { type: Function, required: true },
+  onDragMove: { type: Function, required: true },
 })
 
 // Create a new local template ref for the editable div.

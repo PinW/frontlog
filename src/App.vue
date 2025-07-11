@@ -163,6 +163,58 @@ function onBlur(task, event) {
   activeTaskId.value = null
 }
 
+/**
+ * Handles the move event for draggable items to update the ghost's indentation.
+ * This function is called continuously as you drag an item over other items.
+ * @param {object} evt - The event object from vuedraggable.
+ */
+ function onDragMove(evt) {
+  // Find the ghost element that vuedraggable creates.
+  const ghostEl = document.querySelector('.sortable-ghost');
+  if (!ghostEl) return;
+  
+  // Find the specific content div inside the ghost element to apply padding.
+  const ghostContent = ghostEl.querySelector('.flex');
+  if (!ghostContent) return;
+
+  let level = 0;
+  const relatedEl = evt.related; // The element we are dragging over.
+  
+  // This is our new logic to handle dragging below the last child.
+  // It checks if the drop target is a different list than the related element's parent.
+  if (evt.willInsertAfter && relatedEl.parentElement !== evt.to) {
+    // `evt.to` is the actual <ul> we are dropping into.
+    // Its parentElement is the <li> that contains the list.
+    const parentLi = evt.to.parentElement;
+    if (parentLi && parentLi.dataset.id) {
+      // The new item's level is the parent's level plus one.
+      level = tasksStore.getTaskIndentation(parentLi.dataset.id) + 1;
+    }
+  } else if (relatedEl && relatedEl.dataset.id) {
+    // This is the original logic for all other cases, which works correctly.
+    // The level is the same as the item we are hovering over.
+    level = tasksStore.getTaskIndentation(relatedEl.dataset.id);
+  }
+
+  // Apply the calculated indentation to the ghost element.
+  ghostContent.style.paddingLeft = `${16 + level * 20}px`;
+}
+
+/**
+ * Hides the native browser drag image that follows the cursor.
+ * @param {object} event - The drag start event from vuedraggable.
+ */
+ function onDragStart(event) {
+  const dataTransfer = event.originalEvent.dataTransfer;
+
+  // Create a new, transparent 1x1 pixel image.
+  const transparentImage = new Image();
+  transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+  // Set this transparent image as the drag preview.
+  dataTransfer.setDragImage(transparentImage, 0, 0);
+}
+
 // **LIFECYCLE HOOKS FOR REF MANAGEMENT**
 
 // Before each update, clear the refs object.
@@ -436,8 +488,9 @@ function clearLocalStorage() {
         item-key="id"
         tag="ul"
         group="tasks"
-        handle=".drag-handle"      
-      >
+        handle=".drag-handle"
+        :move="onDragMove"
+        >
         <template #item="{ element: task }">
            <TaskItem
             :key="task.id"
@@ -450,6 +503,7 @@ function clearLocalStorage() {
             :onFocus="onFocus"
             :onBlur="onBlur"
             :updateDesiredXPosition="updateDesiredXPosition"
+            :onDragMove="onDragMove"
           />
         </template>
       </draggable>
