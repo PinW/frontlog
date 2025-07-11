@@ -200,21 +200,6 @@ function onBlur(task, event) {
   ghostContent.style.paddingLeft = `${16 + level * 20}px`;
 }
 
-/**
- * Hides the native browser drag image that follows the cursor.
- * @param {object} event - The drag start event from vuedraggable.
- */
- function onDragStart(event) {
-  const dataTransfer = event.originalEvent.dataTransfer;
-
-  // Create a new, transparent 1x1 pixel image.
-  const transparentImage = new Image();
-  transparentImage.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
-
-  // Set this transparent image as the drag preview.
-  dataTransfer.setDragImage(transparentImage, 0, 0);
-}
-
 // **LIFECYCLE HOOKS FOR REF MANAGEMENT**
 
 // Before each update, clear the refs object.
@@ -490,6 +475,7 @@ function clearLocalStorage() {
         group="tasks"
         handle=".drag-handle"
         :move="onDragMove"
+        chosen-class="bg-blue-100"
         >
         <template #item="{ element: task }">
            <TaskItem

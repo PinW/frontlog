@@ -44,6 +44,7 @@
       group="tasks"
       handle=".drag-handle"
       :move="onDragMove"
+      chosen-class="bg-blue-100"
       >
       <template #item="{ element: child }">
         <TaskItem
