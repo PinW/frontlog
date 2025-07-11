@@ -1,12 +1,23 @@
 <template>
   <li
+    :data-id="task.id"  
     :class="{ 'bg-highlight': task.id === activeTaskId }"
     class="rounded-lg"
   >
     <div 
-      :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       class="flex items-start gap-3 p-2"
+      :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       >
+      <span class="drag-handle cursor-grab text-gray-400 hover:text-gray-600">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <circle cx="5" cy="4" r="1.5"/>
+          <circle cx="11" cy="4" r="1.5"/>
+          <circle cx="5" cy="12" r="1.5"/>
+          <circle cx="11" cy="12" r="1.5"/>
+          <circle cx="5" cy="8" r="1.5"/>
+          <circle cx="11" cy="8" r="1.5"/>
+        </svg>
+      </span>
       <input
         type="checkbox"
         :checked="task.completed"
@@ -15,7 +26,7 @@
         :style="{ accentColor: 'var(--color-primary)' }"
       />
       <div
-        :ref="(el) => { if (el) taskInputRefs[task.id] = el }"
+        :ref="setupDivRef"
         :contenteditable="true"
         @input="(event) => onTaskInput(task, event)"
         @focus="() => onFocus(task.id)"
@@ -26,27 +37,36 @@
       >
       </div>
     </div>
-    <ul v-if="task.children && task.children.length">
-      <TaskItem
-        v-for="child in task.children"
-        :key="child.id"
-        :task="child"
-        :activeTaskId="activeTaskId"
-        :taskInputRefs="taskInputRefs"
-        :getTaskIndentation="getTaskIndentation"
-        :toggleTaskCompletion="toggleTaskCompletion"
-        :onTaskInput="onTaskInput"
-        :onFocus="onFocus"
-        :onBlur="onBlur"
-        :updateDesiredXPosition="updateDesiredXPosition"
-      />
-    </ul>
+    <draggable
+      :list="task.children"
+      item-key="id"
+      tag="ul"
+      group="tasks"
+      handle=".drag-handle"
+    >
+      <template #item="{ element: child }">
+        <TaskItem
+          :key="child.id"
+          :task="child"
+          :activeTaskId="activeTaskId"
+          :taskInputRefs="taskInputRefs"
+          :getTaskIndentation="getTaskIndentation"
+          :toggleTaskCompletion="toggleTaskCompletion"
+          :onTaskInput="onTaskInput"
+          :onFocus="onFocus"
+          :onBlur="onBlur"
+          :updateDesiredXPosition="updateDesiredXPosition"
+        />
+      </template>
+    </draggable>
   </li>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { defineProps, ref, onMounted } from 'vue'; // Add ref and onMounted
+import draggable from 'vuedraggable'
 import TaskItem from './TaskItem.vue'
+
 const props = defineProps({
   task: { type: Object, required: true },
   activeTaskId: { type: [String, null], required: true },
@@ -58,4 +78,24 @@ const props = defineProps({
   onBlur: { type: Function, required: true },
   updateDesiredXPosition: { type: Function, required: true },
 })
+
+// Create a new local template ref for the editable div.
+const editableDiv = ref(null);
+
+// This function now sets both the local ref and the parent's ref object.
+function setupDivRef(el) {
+  editableDiv.value = el;
+  if (el) {
+    props.taskInputRefs[props.task.id] = el;
+  }
+}
+
+// THIS IS THE CRITICAL FIX
+onMounted(() => {
+  // When the component is created, populate its text from the store's data.
+  if (editableDiv.value) {
+    editableDiv.value.innerText = props.task.text;
+  }
+});
+
 </script> 

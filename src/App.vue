@@ -5,6 +5,7 @@ import { useSettingsStore } from './stores/settings'
 import { storeToRefs } from 'pinia'
 import { useEventListener } from '@vueuse/core'
 import HotkeyHelper from './components/HotkeyHelper.vue'
+import draggable from 'vuedraggable'
 
 import Settings from './components/Settings.vue'
 import TaskItem from './components/TaskItem.vue'
@@ -28,7 +29,7 @@ const {
   moveTaskUp,
   moveTaskDown,
   nestTask,
-  unnestTask
+  unnestTask,
 } = tasksStore
 
 // Refs for the editable div elements
@@ -112,7 +113,6 @@ function placeCursorAtCoordinates(element, coords) {
 
   // 3. After the DOM update, restore the cursor's position
   nextTick(() => {
-    syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
     const el = taskInputRefs.value[activeTaskId.value];
     if (!el) return;
 
@@ -171,23 +171,8 @@ onBeforeUpdate(() => {
   taskInputRefs.value = {}
 })
 
-// Utility: Recursively sync innerText for all tasks at all levels
-function syncAllTaskTexts(tasks, refs) {
-  for (const task of tasks) {
-    const el = refs[task.id];
-    if (el) el.innerText = task.text;
-    if (task.children && task.children.length) {
-      syncAllTaskTexts(task.children, refs);
-    }
-  }
-}
-
 // When the component mounts, populate the divs and focus the active task.
 onMounted(() => {
-  // Wait for refs to be populated, then sync all task texts
-  nextTick(() => {
-    syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
-  });
   // Seed an empty task if there are no tasks
   if (taskList.value.length === 0) {
     const newId = tasksStore.createTask({ text: '', relativeToId: null, position: 'after' });
@@ -323,10 +308,6 @@ useEventListener(window, 'keydown', (event) => {
         activeTaskId.value = newActiveTaskId ?? null;
         
         nextTick(() => {
-          // --- THIS IS THE FIX ---
-          // Sync all text from the store to the DOM before focusing
-          syncAllTaskTexts(tasksStore.tasks, taskInputRefs.value);
-
           if (activeTaskId.value && taskInputRefs.value[activeTaskId.value]) {
             const elToFocus = taskInputRefs.value[activeTaskId.value];
             elToFocus.focus();
@@ -449,21 +430,29 @@ function clearLocalStorage() {
       </button>
     </div>
     <div class="w-full max-w-md">
-      <ul v-if="taskCount > 0">
-        <TaskItem
-          v-for="task in taskList"
-          :key="task.id"
-          :task="task"
-          :activeTaskId="activeTaskId"
-          :taskInputRefs="taskInputRefs"
-          :getTaskIndentation="tasksStore.getTaskIndentation"
-          :toggleTaskCompletion="toggleTaskCompletion"
-          :onTaskInput="onTaskInput"
-          :onFocus="onFocus"
-          :onBlur="onBlur"
-          :updateDesiredXPosition="updateDesiredXPosition"
-        />
-      </ul>
+      <draggable
+        v-if="taskCount > 0"
+        :list="taskList"
+        item-key="id"
+        tag="ul"
+        group="tasks"
+        handle=".drag-handle"      
+      >
+        <template #item="{ element: task }">
+           <TaskItem
+            :key="task.id"
+            :task="task"
+            :activeTaskId="activeTaskId"
+            :taskInputRefs="taskInputRefs"
+            :getTaskIndentation="tasksStore.getTaskIndentation"
+            :toggleTaskCompletion="toggleTaskCompletion"
+            :onTaskInput="onTaskInput"
+            :onFocus="onFocus"
+            :onBlur="onBlur"
+            :updateDesiredXPosition="updateDesiredXPosition"
+          />
+        </template>
+      </draggable>
     </div>
     <HotkeyHelper />
     <Settings />

@@ -366,6 +366,7 @@ export const useTasksStore = defineStore('tasks', () => {
     taskList: computed(() => tasks.value),
     taskCount: computed(() => tasks.value.length),
     flattenedTaskList,
+    findTaskMeta,
     createTask,
     removeTask,
     toggleTaskCompletion,
