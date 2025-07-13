@@ -7,9 +7,10 @@
   --color-primary: theme('colors.indigo.600');
   --color-primary-foreground: theme('colors.white');
   --color-border: theme('colors.slate.300');
-  --color-highlight: theme('colors.amber.100');
+  --color-highlight: theme('colors.slate.50');
   --color-highlight-border: theme('colors.amber.200');
   --color-dragging: theme('colors.blue.100');
+  --color-dragging-foreground: theme('colors.blue.300');
 }
 
 .dark {
@@ -31,8 +32,8 @@
   --color-border: var(--color-border);
   --color-highlight: var(--color-highlight);
   --color-highlight-border: var(--color-highlight-border);
-  --color-dragging: var(--color-dragging)
-  
+  --color-dragging: var(--color-dragging);
+  --color-dragging-foreground: var(--color-dragging-foreground);
 }
 
 

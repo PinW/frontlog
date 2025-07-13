@@ -38,6 +38,7 @@
       <div
         :ref="setupDivRef"
         :contenteditable="true"
+        :spellcheck="spellcheckEnabled"
         @input="(event) => onTaskInput(task, event)"
         @focus="() => onFocus(task.id)"
         @click="updateDesiredXPosition"
@@ -66,6 +67,7 @@
           :activeTaskId="activeTaskId"
           :isDragging="isDragging"
           :taskInputRefs="taskInputRefs"
+          :spellcheckEnabled="spellcheckEnabled"
           :getTaskIndentation="getTaskIndentation"
           :toggleTaskCompletion="toggleTaskCompletion"
           :onTaskInput="onTaskInput"
@@ -93,6 +95,7 @@ const props = defineProps({
   activeTaskId: { type: [String, null], required: true },
   isDragging: { type: Boolean, required: true },
   taskInputRefs: { type: Object, required: true },
+  spellcheckEnabled: { type: Boolean, required: true },
   getTaskIndentation: { type: Function, required: true },
   toggleTaskCompletion: { type: Function, required: true },
   onTaskInput: { type: Function, required: true },

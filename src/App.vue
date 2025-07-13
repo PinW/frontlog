@@ -38,6 +38,7 @@ const taskInputRefs = ref({})
 // New state for cursor's desired horizontal position and navigation direction
 const desiredXPosition = ref(null)
 const navigationDirection = ref(null)
+const isSpellcheckRefreshing = ref(false)
 
 /**
  * Gets the current cursor's horizontal position (x-coordinate) and stores it.
@@ -80,6 +81,17 @@ function placeCursorAtCoordinates(element, coords) {
     selection.removeAllRanges();
     selection.addRange(range);
   }
+}
+
+/**
+ * Forces a refresh of a contenteditable element by toggling its contentEditable property.
+ * This is useful for forcing the browser to update spellcheck state or other behaviors.
+ * @param {HTMLElement} element - The contenteditable element to refresh.
+ */
+function refreshContentEditableElement(element) {
+  if (!element) return;
+  element.contentEditable = 'false';
+  element.contentEditable = 'true';
 }
 
 /**
@@ -156,7 +168,9 @@ function insertTask(insertAbove = false) {
 
 // Add onFocus and onBlur handlers
 function onFocus(taskId) {
-  activeTaskId.value = taskId
+  if (!isSpellcheckRefreshing.value) {
+    activeTaskId.value = taskId
+  }
 }
 function onBlur(task, event) {
   onTaskInput(task, event)
@@ -171,17 +185,26 @@ function handleBackgroundClick(event) {
   }
 }
 
-// Handle mousedown on drag handle
-function onDragHandleMouseDown(event) {
-  const dragHandle = event.target.closest('.drag-handle')
-  if (dragHandle) {
-    const taskElement = dragHandle.closest('li[data-id]')
-    if (taskElement) {
-      const taskId = taskElement.dataset.id
-      isDragging.value = true
-      activeTaskId.value = taskId
+
+// Handle drag choose event (when item is selected for potential drag)
+function onDragChoose(event) {
+  const taskId = event.item.dataset.id
+  isDragging.value = true
+  activeTaskId.value = taskId  // Activate task when chosen for drag
+}
+
+// Handle drag unchoose event (when drag is cancelled)
+function onDragUnchoose(event) {
+  const taskId = event.item.dataset.id
+  isDragging.value = false
+  
+  // Focus the task that was clicked
+  nextTick(() => {
+    const el = taskInputRefs.value[taskId]
+    if (el) {
+      el.focus()
     }
-  }
+  })
 }
 
 // Track if we're currently dragging to prevent blur interference
@@ -192,8 +215,7 @@ function onDragStart(event) {
   const draggedElement = event.item;
   const taskId = draggedElement.dataset.id;
   
-  // Mark that we're dragging and restore the active task if it was just cleared by blur
-  isDragging.value = true
+  // Set the dragged task as active
   activeTaskId.value = taskId
 }
 
@@ -213,21 +235,9 @@ function onDragEnd(event) {
     const el = taskInputRefs.value[taskId];
     if (el) {
       // Force the element to be focusable by temporarily removing and re-adding contenteditable
-      el.contentEditable = 'false';
-      el.contentEditable = 'true';
-      
+      refreshContentEditableElement(el);
       // Focus and set cursor
       el.focus();
-      
-      // Set cursor to beginning of text
-      if (el.firstChild) {
-        const range = document.createRange();
-        const sel = window.getSelection();
-        range.setStart(el.firstChild, 0);
-        range.collapse(true);
-        sel.removeAllRanges();
-        sel.addRange(range);
-      }
     }
   });
 }
@@ -303,6 +313,28 @@ onMounted(() => {
 const onTaskInput = (task, event) => {
   updateTaskText({ id: task.id, newText: event.target.innerText })
 }
+
+// Watch for spellcheck changes to refresh all contenteditable elements
+watch(spellcheckEnabled, () => {
+  isSpellcheckRefreshing.value = true;
+  
+  // Force refresh all task input elements to update spellcheck state
+  Object.values(taskInputRefs.value).forEach(el => {
+    refreshContentEditableElement(el);
+  });
+  
+  // Trigger spellcheck evaluation with just one element
+  const firstTaskEl = Object.values(taskInputRefs.value)[0];
+  if (firstTaskEl) {
+    firstTaskEl.focus();
+    nextTick(() => {
+      firstTaskEl.blur();
+      isSpellcheckRefreshing.value = false;
+    });
+  } else {
+    isSpellcheckRefreshing.value = false;
+  }
+});
 
 // Watch for changes in the active task ID to focus and place cursor smartly only when navigating at top/bottom
 watch(activeTaskId, (newId, oldId) => {
@@ -520,19 +552,15 @@ function clearLocalStorage() {
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background" @click="handleBackgroundClick">
     <div class="fixed top-2 left-2 z-50 flex gap-2">
-      <div class="px-3 py-1 rounded text-xs font-bold shadow"
-           :class="isDragging ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'">
-        isDragging: {{ isDragging }}
-      </div>
       <button
-        @click="tasksStore.clearAllTasks()"
+        @click.stop="tasksStore.clearAllTasks()"
         class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
         title="Clear all tasks (debug)"
       >
         Clear All Tasks
       </button>
       <button
-        @click="clearLocalStorage"
+        @click.stop="clearLocalStorage"
         class="px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-blue-700 transition-all"
         title="Clear local storage (debug)"
       >
@@ -548,6 +576,8 @@ function clearLocalStorage() {
         group="tasks"
         handle=".drag-handle"
         :move="onDragMove"
+        @choose="onDragChoose"
+        @unchoose="onDragUnchoose"
         @start="onDragStart"
         @end="onDragEnd"
         >
@@ -558,6 +588,7 @@ function clearLocalStorage() {
             :activeTaskId="activeTaskId"
             :isDragging="isDragging"
             :taskInputRefs="taskInputRefs"
+            :spellcheckEnabled="spellcheckEnabled"
             :getTaskIndentation="tasksStore.getTaskIndentation"
             :toggleTaskCompletion="toggleTaskCompletion"
             :onTaskInput="onTaskInput"
@@ -565,9 +596,10 @@ function clearLocalStorage() {
             :onBlur="onBlur"
             :updateDesiredXPosition="updateDesiredXPosition"
             :onDragMove="onDragMove"
+            :onDragChoose="onDragChoose"
+            :onDragUnchoose="onDragUnchoose"
             :onDragStart="onDragStart"
             :onDragEnd="onDragEnd"
-            :onDragHandleMouseDown="onDragHandleMouseDown"
           />
         </template>
       </draggable>
