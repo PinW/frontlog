@@ -140,7 +140,7 @@ function placeCursorAtCoordinates(element, coords) {
 
 // Function to add a new task
 function insertTask(insertAbove = false) {
-  const newId = tasksStore.createTask({
+  const newId = createTask({
     text: '',
     relativeToId: activeTaskId.value,
     position: insertAbove ? 'before' : 'after'
@@ -161,6 +161,38 @@ function onFocus(taskId) {
 function onBlur(task, event) {
   onTaskInput(task, event)
   activeTaskId.value = null
+}
+
+// Handle drag end event to auto-select the dragged task
+function onDragEnd(event) {
+  const draggedElement = event.item;
+  const taskId = draggedElement.dataset.id;
+  
+  // Set active task immediately
+  activeTaskId.value = taskId;
+  
+  // Use requestAnimationFrame to ensure drag operation is fully complete
+  requestAnimationFrame(() => {
+    const el = taskInputRefs.value[taskId];
+    if (el) {
+      // Force the element to be focusable by temporarily removing and re-adding contenteditable
+      el.contentEditable = 'false';
+      el.contentEditable = 'true';
+      
+      // Focus and set cursor
+      el.focus();
+      
+      // Set cursor to beginning of text
+      if (el.firstChild) {
+        const range = document.createRange();
+        const sel = window.getSelection();
+        range.setStart(el.firstChild, 0);
+        range.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    }
+  });
 }
 
 /**
@@ -475,6 +507,7 @@ function clearLocalStorage() {
         group="tasks"
         handle=".drag-handle"
         :move="onDragMove"
+        @end="onDragEnd"
         chosen-class="bg-blue-100"
         >
         <template #item="{ element: task }">
@@ -490,6 +523,7 @@ function clearLocalStorage() {
             :onBlur="onBlur"
             :updateDesiredXPosition="updateDesiredXPosition"
             :onDragMove="onDragMove"
+            :onDragEnd="onDragEnd"
           />
         </template>
       </draggable>
