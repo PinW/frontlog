@@ -9,6 +9,7 @@
   --color-border: theme('colors.slate.300');
   --color-highlight: theme('colors.amber.100');
   --color-highlight-border: theme('colors.amber.200');
+  --color-dragging: theme('colors.blue.100');
 }
 
 .dark {
@@ -30,6 +31,8 @@
   --color-border: var(--color-border);
   --color-highlight: var(--color-highlight);
   --color-highlight-border: var(--color-highlight-border);
+  --color-dragging: var(--color-dragging)
+  
 }
 
 

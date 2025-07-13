@@ -1,7 +1,10 @@
 <template>
   <li
     :data-id="task.id"  
-    :class="{ 'bg-highlight': task.id === activeTaskId }"
+    :class="{ 
+      'bg-highlight': task.id === activeTaskId && !isDragging,
+      'bg-dragging': task.id === activeTaskId && isDragging 
+    }"
     class="rounded-lg"
   >
     <div 
@@ -9,7 +12,7 @@
       :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       >
       <div class="flex items-center">
-        <span class="drag-handle cursor-grab text-gray-300 hover:text-gray-600 transition-colors">
+        <span class="drag-handle cursor-grab text-gray-300 hover:text-gray-600 transition-colors" @mousedown="onDragHandleMouseDown">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="5" cy="4" r="1.5"/>
             <circle cx="11" cy="4" r="1.5"/>
@@ -46,7 +49,7 @@
       group="tasks"
       handle=".drag-handle"
       :move="onDragMove"
-      chosen-class="bg-blue-100"
+      @start="onDragStart"
       @end="onDragEnd"
       >
       <template #item="{ element: child }">
@@ -54,6 +57,7 @@
           :key="child.id"
           :task="child"
           :activeTaskId="activeTaskId"
+          :isDragging="isDragging"
           :taskInputRefs="taskInputRefs"
           :getTaskIndentation="getTaskIndentation"
           :toggleTaskCompletion="toggleTaskCompletion"
@@ -62,7 +66,9 @@
           :onBlur="onBlur"
           :updateDesiredXPosition="updateDesiredXPosition"
           :onDragMove="onDragMove"
+          :onDragStart="onDragStart"
           :onDragEnd="onDragEnd"
+          :onDragHandleMouseDown="onDragHandleMouseDown"
         />
       </template>
     </draggable>
@@ -77,6 +83,7 @@ import TaskItem from './TaskItem.vue'
 const props = defineProps({
   task: { type: Object, required: true },
   activeTaskId: { type: [String, null], required: true },
+  isDragging: { type: Boolean, required: true },
   taskInputRefs: { type: Object, required: true },
   getTaskIndentation: { type: Function, required: true },
   toggleTaskCompletion: { type: Function, required: true },
@@ -85,7 +92,9 @@ const props = defineProps({
   onBlur: { type: Function, required: true },
   updateDesiredXPosition: { type: Function, required: true },
   onDragMove: { type: Function, required: true },
+  onDragStart: { type: Function, required: true },
   onDragEnd: { type: Function, required: true },
+  onDragHandleMouseDown: { type: Function, required: true },
 })
 
 // Create a new local template ref for the editable div.

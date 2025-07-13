@@ -160,13 +160,50 @@ function onFocus(taskId) {
 }
 function onBlur(task, event) {
   onTaskInput(task, event)
-  activeTaskId.value = null
+  // Don't automatically clear activeTaskId on blur
+}
+
+// Handle background click to clear active task
+function handleBackgroundClick(event) {
+  // Only clear if clicking outside the task list area
+  if (!event.target.closest('li[data-id], .draggable')) {
+    activeTaskId.value = null
+  }
+}
+
+// Handle mousedown on drag handle
+function onDragHandleMouseDown(event) {
+  const dragHandle = event.target.closest('.drag-handle')
+  if (dragHandle) {
+    const taskElement = dragHandle.closest('li[data-id]')
+    if (taskElement) {
+      const taskId = taskElement.dataset.id
+      isDragging.value = true
+      activeTaskId.value = taskId
+    }
+  }
+}
+
+// Track if we're currently dragging to prevent blur interference
+const isDragging = ref(false)
+
+// Handle drag start event
+function onDragStart(event) {
+  const draggedElement = event.item;
+  const taskId = draggedElement.dataset.id;
+  
+  // Mark that we're dragging and restore the active task if it was just cleared by blur
+  isDragging.value = true
+  activeTaskId.value = taskId
 }
 
 // Handle drag end event to auto-select the dragged task
 function onDragEnd(event) {
   const draggedElement = event.item;
   const taskId = draggedElement.dataset.id;
+  
+  // Clear the dragging flag
+  isDragging.value = false
   
   // Set active task immediately
   activeTaskId.value = taskId;
@@ -481,8 +518,12 @@ function clearLocalStorage() {
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background">
+  <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background" @click="handleBackgroundClick">
     <div class="fixed top-2 left-2 z-50 flex gap-2">
+      <div class="px-3 py-1 rounded text-xs font-bold shadow"
+           :class="isDragging ? 'bg-green-600 text-white' : 'bg-gray-600 text-white'">
+        isDragging: {{ isDragging }}
+      </div>
       <button
         @click="tasksStore.clearAllTasks()"
         class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"
@@ -507,14 +548,15 @@ function clearLocalStorage() {
         group="tasks"
         handle=".drag-handle"
         :move="onDragMove"
+        @start="onDragStart"
         @end="onDragEnd"
-        chosen-class="bg-blue-100"
         >
         <template #item="{ element: task }">
            <TaskItem
             :key="task.id"
             :task="task"
             :activeTaskId="activeTaskId"
+            :isDragging="isDragging"
             :taskInputRefs="taskInputRefs"
             :getTaskIndentation="tasksStore.getTaskIndentation"
             :toggleTaskCompletion="toggleTaskCompletion"
@@ -523,7 +565,9 @@ function clearLocalStorage() {
             :onBlur="onBlur"
             :updateDesiredXPosition="updateDesiredXPosition"
             :onDragMove="onDragMove"
+            :onDragStart="onDragStart"
             :onDragEnd="onDragEnd"
+            :onDragHandleMouseDown="onDragHandleMouseDown"
           />
         </template>
       </draggable>
