@@ -11,7 +11,7 @@
       class="flex items-center gap-3 p-2 group"
       :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       >
-      <div class="flex items-center">
+      <div class="flex items-center self-start mt-px">
         <span 
           class="drag-handle cursor-grab mr-1 transition-opacity duration-100 p-[3px]"
           :class="{ 
