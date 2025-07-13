@@ -5,26 +5,28 @@
     class="rounded-lg"
   >
     <div 
-      class="flex items-start gap-3 p-2"
+      class="flex items-center gap-3 p-2"
       :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       >
-      <span class="drag-handle cursor-grab text-gray-400 hover:text-gray-600">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-          <circle cx="5" cy="4" r="1.5"/>
-          <circle cx="11" cy="4" r="1.5"/>
-          <circle cx="5" cy="12" r="1.5"/>
-          <circle cx="11" cy="12" r="1.5"/>
-          <circle cx="5" cy="8" r="1.5"/>
-          <circle cx="11" cy="8" r="1.5"/>
-        </svg>
-      </span>
-      <input
-        type="checkbox"
-        :checked="task.completed"
-        @change="() => toggleTaskCompletion(task.id)"
-        class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0 mt-1"
-        :style="{ accentColor: 'var(--color-primary)' }"
-      />
+      <div class="flex items-center">
+        <span class="drag-handle cursor-grab text-gray-300 hover:text-gray-600 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="5" cy="4" r="1.5"/>
+            <circle cx="11" cy="4" r="1.5"/>
+            <circle cx="5" cy="12" r="1.5"/>
+            <circle cx="11" cy="12" r="1.5"/>
+            <circle cx="5" cy="8" r="1.5"/>
+            <circle cx="11" cy="8" r="1.5"/>
+          </svg>
+        </span>
+        <input
+          type="checkbox"
+          :checked="task.completed"
+          @change="() => toggleTaskCompletion(task.id)"
+          class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0"
+          :style="{ accentColor: 'var(--color-primary)' }"
+        />
+      </div>
       <div
         :ref="setupDivRef"
         :contenteditable="true"
