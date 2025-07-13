@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
-    spellcheckEnabled: true,
+    spellcheckEnabled: false,
   }),
   actions: {
     toggleSpellcheck() {

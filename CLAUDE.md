@@ -118,3 +118,4 @@ The application uses Pinia stores with three main stores:
 ## Claude Code Instructions
 
 - When I say "save" commit your changes to git and report progress
+- When I say "SPD" that means save, then push, then deploy
