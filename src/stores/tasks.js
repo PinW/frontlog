@@ -187,10 +187,14 @@ export const useTasksStore = defineStore('tasks', () => {
   }
 
   /**
-   * Clears all tasks from the list.
+   * Clears all tasks from the list and adds a single empty task.
    */
   function clearAllTasks() {
     tasks.value = []
+    // Add a single empty task after clearing
+    const newId = createTask({ text: '', relativeToId: null, position: 'after' });
+    activeTaskId.value = newId;
+    return newId;
   }
 
   /**

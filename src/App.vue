@@ -567,7 +567,7 @@ function clearLocalStorage() {
         Clear Local Storage
       </button>
     </div>
-    <div class="w-full max-w-md">
+    <div class="w-full max-w-prose">
       <draggable
         v-if="taskCount > 0"
         :list="taskList"
