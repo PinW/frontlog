@@ -8,18 +8,23 @@
     class="rounded-lg"
   >
     <div 
-      class="flex items-center gap-3 p-2"
+      class="flex items-center gap-3 p-2 group"
       :style="{ 'padding-left': `${16 + getTaskIndentation(task.id) * 20}px` }"
       >
       <div class="flex items-center">
-        <span class="drag-handle cursor-grab text-gray-300 hover:text-gray-600 transition-colors" @mousedown="onDragHandleMouseDown">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+        <span 
+          class="drag-handle cursor-grab mr-1 transition-opacity duration-100 p-[3px]"
+          :class="{ 
+            'opacity-40': task.id === activeTaskId || false,
+            'opacity-0 group-hover:opacity-40': task.id !== activeTaskId 
+          }">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="20" viewBox="0 0 16 20" fill="currentColor">
             <circle cx="5" cy="4" r="1.5"/>
             <circle cx="11" cy="4" r="1.5"/>
-            <circle cx="5" cy="12" r="1.5"/>
-            <circle cx="11" cy="12" r="1.5"/>
-            <circle cx="5" cy="8" r="1.5"/>
-            <circle cx="11" cy="8" r="1.5"/>
+            <circle cx="5" cy="10" r="1.5"/>
+            <circle cx="11" cy="10" r="1.5"/>
+            <circle cx="5" cy="16" r="1.5"/>
+            <circle cx="11" cy="16" r="1.5"/>
           </svg>
         </span>
         <input
@@ -49,6 +54,8 @@
       group="tasks"
       handle=".drag-handle"
       :move="onDragMove"
+      @choose="onDragChoose"
+      @unchoose="onDragUnchoose"
       @start="onDragStart"
       @end="onDragEnd"
       >
@@ -66,9 +73,10 @@
           :onBlur="onBlur"
           :updateDesiredXPosition="updateDesiredXPosition"
           :onDragMove="onDragMove"
+          :onDragChoose="onDragChoose"
+          :onDragUnchoose="onDragUnchoose"
           :onDragStart="onDragStart"
           :onDragEnd="onDragEnd"
-          :onDragHandleMouseDown="onDragHandleMouseDown"
         />
       </template>
     </draggable>
@@ -92,9 +100,10 @@ const props = defineProps({
   onBlur: { type: Function, required: true },
   updateDesiredXPosition: { type: Function, required: true },
   onDragMove: { type: Function, required: true },
+  onDragChoose: { type: Function, required: true },
+  onDragUnchoose: { type: Function, required: true },
   onDragStart: { type: Function, required: true },
   onDragEnd: { type: Function, required: true },
-  onDragHandleMouseDown: { type: Function, required: true },
 })
 
 // Create a new local template ref for the editable div.
