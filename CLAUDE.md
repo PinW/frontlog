@@ -119,10 +119,7 @@ The application uses Pinia stores with three main stores:
 - When I say "save" commit your changes to git and report progress
 - When I say "spd" that means save, then push, then deploy
 - When I say "save my changes" look for changes I did without you and commit them
-
-## Workflow Guidelines
-
-- When we commit to git, review changes and update claude.md as needed
+- When I say "progress report [days]" report on the last [days] of commits, then suggest edits to CLAUDE.md if needed
 
 ## Style Guidelines
 
