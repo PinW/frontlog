@@ -31,8 +31,7 @@
           type="checkbox"
           :checked="task.completed"
           @change="() => toggleTaskCompletion(task.id)"
-          class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0"
-          :style="{ accentColor: 'var(--color-primary)' }"
+          class="h-5 w-5 rounded focus:ring focus:ring-primary cursor-pointer flex-shrink-0 accent-primary"
         />
       </div>
       <div
@@ -44,7 +43,7 @@
         @click="updateDesiredXPosition"
         @blur="(event) => onBlur(task, event)"
         class="task-input w-full bg-transparent text-lg resize-none overflow-hidden editable"
-        :class="{ 'text-foreground': !task.completed, 'text-muted line-through': task.completed }"
+        :class="{ 'text-foreground': !task.completed, 'text-complete-dimmed line-through': task.completed }"
       >
       </div>
     </div>

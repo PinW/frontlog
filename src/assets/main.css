@@ -4,13 +4,14 @@
   --color-background: theme('colors.slate.100');
   --color-foreground: theme('colors.slate.800');
   --color-card: theme('colors.white');
-  --color-primary: theme('colors.indigo.600');
+  --color-primary: theme('colors.teal.600');
   --color-primary-foreground: theme('colors.white');
+  --color-complete-dimmed: theme('colors.teal.600');
   --color-border: theme('colors.slate.300');
-  --color-highlight: theme('colors.slate.50');
-  --color-highlight-border: theme('colors.amber.200');
-  --color-dragging: theme('colors.blue.100');
-  --color-dragging-foreground: theme('colors.blue.300');
+  --color-highlight: theme('colors.white');
+  --color-highlight-border: theme('colors.slate.200');
+  --color-dragging: theme('colors.emerald.200');
+  --color-dragging-foreground: theme('colors.emerald.400');
 }
 
 .dark {
@@ -29,6 +30,7 @@
   --color-card: var(--color-card);
   --color-primary: var(--color-primary);
   --color-primary-foreground: var(--color-primary-foreground);
+  --color-complete-dimmed: var(--color-complete-dimmed);
   --color-border: var(--color-border);
   --color-highlight: var(--color-highlight);
   --color-highlight-border: var(--color-highlight-border);

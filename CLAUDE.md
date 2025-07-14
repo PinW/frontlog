@@ -15,6 +15,9 @@ npm install
 # Start development server with hot reload
 npm run dev
 
+# When Claude Code needs to test changes, use different port to avoid conflicts
+npm run dev -- --port 3001
+
 # Build for production
 npm run build
 
@@ -111,11 +114,16 @@ The application uses Pinia stores with three main stores:
 - Deployment uses `gh-pages` package to publish `dist` folder
 - Production builds are optimized and minified by Vite
 
+## Claude Code Instructions
+
+- When I say "save" commit your changes to git and report progress
+- When I say "spd" that means save, then push, then deploy
+- When I say "save my changes" look for changes I did without you and commit them
+
 ## Workflow Guidelines
 
 - When we commit to git, review changes and update claude.md as needed
 
-## Claude Code Instructions
+## Style Guidelines
 
-- When I say "save" commit your changes to git and report progress
-- When I say "SPD" that means save, then push, then deploy
+- Always try to implement styles using Tailwind standards, and notify me when you can't
