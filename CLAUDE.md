@@ -115,12 +115,10 @@ The application uses Pinia stores with three main stores:
 - Production builds are optimized and minified by Vite
 
 ## Claude Code Instructions
-
 - When I say "save" commit your changes to git and report progress
 - When I say "spd" that means save, then push, then deploy
 - When I say "save my changes" look for changes I did without you and commit them
 - When I say "progress report [days]" report on the last [days] of commits, then suggest edits to CLAUDE.md if needed
 
 ## Style Guidelines
-
 - Always try to implement styles using Tailwind standards, and notify me when you can't
