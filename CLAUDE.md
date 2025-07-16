@@ -22,7 +22,7 @@ npm run dev -- --port 3001
 npm test
 
 # Run tests once (for CI/CD)
-npm test:run
+npm run test:run
 
 # Run tests with visual interface
 npm test:ui
@@ -121,7 +121,7 @@ The application uses Pinia stores with three main stores:
 ### Testing & Deployment
 - **Comprehensive Test Suite**: 115 automated tests using Vitest, Vue Test Utils, and Testing Library
 - **Test Coverage**: Store operations, component behavior, integration workflows, and edge cases
-- **Test Commands**: `npm test` (watch mode), `npm test:run` (CI), `npm test:ui` (visual interface)
+- **Test Commands**: `npm run test` (watch mode), `npm run test:run` (CI), `npm run test:ui` (visual interface)
 - **Test Files**: Located in `src/` alongside source files with `.test.js` extension
 - **Key Test Areas**:
   - Store CRUD operations and hierarchical task management
