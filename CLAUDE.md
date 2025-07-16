@@ -18,6 +18,15 @@ npm run dev
 # When Claude Code needs to test changes, use different port to avoid conflicts
 npm run dev -- --port 3001
 
+# Run tests (watch mode for development)
+npm test
+
+# Run tests once (for CI/CD)
+npm test:run
+
+# Run tests with visual interface
+npm test:ui
+
 # Build for production
 npm run build
 
@@ -110,7 +119,15 @@ The application uses Pinia stores with three main stores:
 - **Vue DevTools**: Enabled in development mode for debugging
 
 ### Testing & Deployment
-- No automated tests currently implemented
+- **Comprehensive Test Suite**: 115 automated tests using Vitest, Vue Test Utils, and Testing Library
+- **Test Coverage**: Store operations, component behavior, integration workflows, and edge cases
+- **Test Commands**: `npm test` (watch mode), `npm test:run` (CI), `npm test:ui` (visual interface)
+- **Test Files**: Located in `src/` alongside source files with `.test.js` extension
+- **Key Test Areas**:
+  - Store CRUD operations and hierarchical task management
+  - Component rendering, interactions, and event handling
+  - Integration tests for complete user workflows
+  - Edge cases and error conditions
 - Deployment uses `gh-pages` package to publish `dist` folder
 - Production builds are optimized and minified by Vite
 
@@ -119,6 +136,9 @@ The application uses Pinia stores with three main stores:
 - When I say "spd" that means save, then push, then deploy
 - When I say "save my changes" look for changes I did without you and commit them
 - When I say "progress report [days]" report on the last [days] of commits, then suggest edits to CLAUDE.md if needed
+- **Always run tests before committing**: Use `npm test:run` to verify all tests pass
+- **Write tests for new features**: When adding functionality, create corresponding tests
+- **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
 
 ## Style Guidelines
 - Always try to implement styles using Tailwind standards, and notify me when you can't
