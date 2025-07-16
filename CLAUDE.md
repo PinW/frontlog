@@ -132,10 +132,6 @@ The application uses Pinia stores with three main stores:
 - Production builds are optimized and minified by Vite
 
 ## Claude Code Instructions
-- When I say "save" commit your changes to git and report progress
-- When I say "spd" that means save, then push, then deploy
-- When I say "save my changes" look for changes I did without you and commit them
-- When I say "progress report [days]" report on the last [days] of commits, then suggest edits to CLAUDE.md if needed
 - **Always run tests before committing**: Use `npm test:run` to verify all tests pass
 - **Write tests for new features**: When adding functionality, create corresponding tests
 - **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
