@@ -132,10 +132,12 @@ The application uses Pinia stores with three main stores:
 - Production builds are optimized and minified by Vite
 
 ## Claude Code Instructions
-- **Always run tests before committing**: Use `npm test:run` to verify all tests pass
 - **Write tests for new features**: When adding functionality, create corresponding tests
 - **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
-- When using the "save" command update roadmap.md
+- **When using the "save" command**:
+  - **Run tests** if code, tests, or config files were modified (`.js`, `.vue`, `package.json`, `vite.config.js`, etc.)
+  - **Update roadmap.md** only when completing features or planning new ones
+  - **Skip both** for documentation-only changes (`.md` files) or pure formatting updates (flag `Skipping tests: Documentation-only`)
 
 ## Project Files
 - **roadmap.md**: Tracks planned features and development roadmap for the application
