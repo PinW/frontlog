@@ -135,6 +135,10 @@ The application uses Pinia stores with three main stores:
 - **Always run tests before committing**: Use `npm test:run` to verify all tests pass
 - **Write tests for new features**: When adding functionality, create corresponding tests
 - **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
+- When using the "save" command update roadmap.md
+
+## Project Files
+- **roadmap.md**: Tracks planned features and development roadmap for the application
 
 ## Style Guidelines
 - Always try to implement styles using Tailwind standards, and notify me when you can't
