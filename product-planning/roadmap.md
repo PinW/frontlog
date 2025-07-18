@@ -9,6 +9,7 @@ This file tracks features and improvements for the Frontlog task management appl
 ## Product Features
 
 ### Epics
+- As a *dev* I want **App.vue refactored** so that there won't be too much logic in one component
 - As a *user* I want **multiple lists** so I can have bigger buckets for organizing tasks
 - As a *user* I want **today list** so I can specify what I will accomplish today
 - As a *user* I want **inbox list** so I can quickly log inbound ideas for later processing
