@@ -139,12 +139,17 @@ The application uses Pinia stores with three main stores:
   - **Run tests** if code, tests, or config files were modified (`.js`, `.vue`, `package.json`, `vite.config.js`, etc.)
   - **Update roadmap** only when completing features or planning new ones
   - **Skip both** for documentation-only changes (`.md` files) or pure formatting updates (flag `Skipping tests: Documentation-only`)
+  - **Use conventional commits**: `feat: description` (new feature), `fix: description` (bug fix), `docs: description` (docs only)
 
 ## Project Files
 - **product-planning/roadmap.md**: Tracks planned features and development roadmap for the application
 
 ## Style Guidelines
 - Always try to implement styles using Tailwind standards, and notify me when you can't
+
+## Versioning & Releases
+- **Version**: 0.1.0 (dev). Use `npm run release` for semantic versioning with auto-changelog, Git tags, GitHub releases
+- **Strategy**: MAJOR (breaking UI/data), MINOR (features), PATCH (fixes)
 
 ## Additional Tools
 - Gemini CLI agent available, use when explicitly told to. Documentation in CLAUDE-tool-gemini-cli.md

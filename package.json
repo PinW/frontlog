@@ -1,6 +1,6 @@
 {
   "name": "frontlog",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -11,7 +11,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "release": "release-it"
   },
   "dependencies": {
     "@vueuse/core": "^13.5.0",
@@ -23,6 +24,7 @@
     "vuedraggable": "^4.1.0"
   },
   "devDependencies": {
+    "@release-it/conventional-changelog": "^10.0.1",
     "@tailwindcss/vite": "^4.1.10",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/vue": "^8.1.0",
@@ -31,6 +33,7 @@
     "@vue/test-utils": "^2.4.6",
     "gh-pages": "^6.3.0",
     "jsdom": "^26.1.0",
+    "release-it": "^19.0.4",
     "tailwindcss": "^4.1.10",
     "vite": "^6.2.4",
     "vite-plugin-vue-devtools": "^7.7.2",

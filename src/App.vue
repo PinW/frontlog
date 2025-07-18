@@ -12,6 +12,7 @@ import TaskItem from './components/TaskItem.vue'
 
 // Add import for process.env if needed (Vite exposes import.meta.env)
 const isDev = import.meta.env.MODE === 'development'
+const appVersion = process.env.VITE_APP_VERSION || '0.1.0'
 
 // Initialize the store
 const tasksStore = useTasksStore()
@@ -551,7 +552,8 @@ function clearLocalStorage() {
 
 <template>
   <div class="flex flex-col items-center justify-center min-h-screen p-4 bg-background" @click="handleBackgroundClick">
-    <div class="fixed top-2 left-2 z-50 flex gap-2">
+    <div class="fixed top-2 left-2 z-50 flex gap-2 items-center">
+      <span class="text-gray-500 text-xs font-mono">v{{ appVersion }}</span>
       <button
         @click.stop="tasksStore.clearAllTasks()"
         class=" px-3 py-1 rounded bg-blue-600 text-white text-xs font-bold shadow hover:bg-red-700 transition-all"

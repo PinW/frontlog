@@ -18,4 +18,7 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
+  define: {
+    'process.env.VITE_APP_VERSION': JSON.stringify(process.env.npm_package_version)
+  }
 })
