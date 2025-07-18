@@ -57,7 +57,6 @@ This file tracks features and improvements for the Frontlog task management appl
 - When completing items and features move to completed-items.md
 
 ### Formatting
-- **Completed**: Feature format=`✅ Settings with spellcheck toggle`
 - **Product Features**: Story format=`As a *user* I want **today mode** so I can forget about planning and focus on work`
 - **Inbox**: any format=`Something for mobile`
 - **Project todo**: any format=`Run a foundation sprint`
