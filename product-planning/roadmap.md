@@ -44,8 +44,13 @@ This file tracks features and improvements for the Frontlog task management appl
 - As a *user* I want **vertical nest lines** so I can easily see nesting level of tasks
 
 ## Inbox
+- looking into strands agents
 - Integrate into this md based, version controlled, claude/cursor integrated system?
-
+- End work day action --> assess completed and progress
+    - User setting for work end time --> send notification
+    - Share progress via slack/integrations
+- setup project versioning and display in app
+    
 ## Project Todo
 - Update colorTokenCustomization in cursor to highlight markdown titles
 - Run a foundation sprint
@@ -54,6 +59,8 @@ This file tracks features and improvements for the Frontlog task management appl
 ---
 
 ## Instructions for using the roadmap
+- Add all new features/ideas/tasks to the inbox first
+- When completing todos from "project todo" just delete the item
 
 ### Formatting
 - **Completed**: Feature format=`✅ Settings with spellcheck toggle`
@@ -61,5 +68,4 @@ This file tracks features and improvements for the Frontlog task management appl
 - **Inbox**: any format=`Something for mobile`
 - **Project todo**: any format=`Run a foundation sprint`
 
-### Adding new tasks
-- Add all new features/ideas/tasks to the inbox first
+

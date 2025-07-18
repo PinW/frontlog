@@ -132,6 +132,7 @@ The application uses Pinia stores with three main stores:
 - Production builds are optimized and minified by Vite
 
 ## Claude Code Instructions
+- When I say "inbox" add whatever I say to the "Inbox" section in roadmap.md
 - **Write tests for new features**: When adding functionality, create corresponding tests
 - **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
 - **When using the "save" command**:
@@ -144,3 +145,6 @@ The application uses Pinia stores with three main stores:
 
 ## Style Guidelines
 - Always try to implement styles using Tailwind standards, and notify me when you can't
+
+## Additional Tools
+- Gemini CLI agent available, use when explicitly told to. Documentation in CLAUDE-tool-gemini-cli.md
