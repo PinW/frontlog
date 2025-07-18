@@ -4,13 +4,7 @@
 This file tracks features and improvements for the Frontlog task management application.
 
 ## Completed
-- ✅ Basic task creation and editing
-- ✅ Real-time persistence to localStorage
-- ✅ Hierarchical task structure
-- ✅ Keyboard-driven navigation and editing
-- ✅ Drag & drop reordering and nesting
-- ✅ Settings with spellcheck toggle
-- ✅ Comprehensive test suite (115 tests)
+*Completed items moved to completed-tasks.md*
 
 ## Product Features
 
@@ -52,15 +46,15 @@ This file tracks features and improvements for the Frontlog task management appl
 - setup project versioning and display in app
     
 ## Project Todo
-- Update colorTokenCustomization in cursor to highlight markdown titles
 - Run a foundation sprint
 - Setup MCP for experimentation
+- setup project versioning
 
 ---
 
 ## Instructions for using the roadmap
 - Add all new features/ideas/tasks to the inbox first
-- When completing todos from "project todo" just delete the item
+- When completing items and features move to completed-items.md
 
 ### Formatting
 - **Completed**: Feature format=`✅ Settings with spellcheck toggle`
