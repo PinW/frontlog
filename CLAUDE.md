@@ -18,14 +18,6 @@ npm run dev
 # When Claude Code needs to test changes, use different port to avoid conflicts
 npm run dev -- --port 3001
 
-# Run tests (watch mode for development)
-npm test
-
-# Run tests once (for CI/CD)
-npm run test:run
-
-# Run tests with visual interface
-npm test:ui
 
 # Build for production
 npm run build
@@ -118,27 +110,14 @@ The application uses Pinia stores with three main stores:
 - **Hot Reload**: Vite provides instant updates during development
 - **Vue DevTools**: Enabled in development mode for debugging
 
-### Testing & Deployment
-- **Comprehensive Test Suite**: 115 automated tests using Vitest, Vue Test Utils, and Testing Library
-- **Test Coverage**: Store operations, component behavior, integration workflows, and edge cases
-- **Test Commands**: `npm run test` (watch mode), `npm run test:run` (CI), `npm run test:ui` (visual interface)
-- **Test Files**: Located in `src/` alongside source files with `.test.js` extension
-- **Key Test Areas**:
-  - Store CRUD operations and hierarchical task management
-  - Component rendering, interactions, and event handling
-  - Integration tests for complete user workflows
-  - Edge cases and error conditions
+### Deployment
 - Deployment uses `gh-pages` package to publish `dist` folder
 - Production builds are optimized and minified by Vite
 
 ## Claude Code Instructions
 - When I say "inbox" add whatever I say to the "Inbox" section in roadmap.md
-- **Write tests for new features**: When adding functionality, create corresponding tests
-- **Run tests when debugging**: Use tests to verify bug fixes and prevent regressions
 - **When using the "save" command**:
-  - **Run tests** if code, tests, or config files were modified (`.js`, `.vue`, `package.json`, `vite.config.js`, etc.)
   - **Update roadmap** only when completing features or planning new ones
-  - **Skip both** for documentation-only changes (`.md` files) or pure formatting updates (flag `Skipping tests: Documentation-only`)
   - **Use conventional commits**: `feat: description` (new feature), `fix: description` (bug fix), `docs: description` (docs only)
 
 ## Project Files
