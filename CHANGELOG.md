@@ -1,5 +1,7 @@
 # Changelog
 
+## [0.2.1](https://github.com/PinW/frontlog/compare/v0.2.0...v0.2.1) (2025-07-24)
+
 # 0.2.0 (2025-07-18)
 
 
