@@ -131,5 +131,3 @@ The application uses Pinia stores with three main stores:
 - **Strategy**: MAJOR (breaking UI/data), MINOR (features), PATCH (fixes)
 - **Never bump to 1.0.0 without explicit user approval**
 
-## Additional Tools
-- Gemini CLI agent available, use when explicitly told to. Documentation in CLAUDE-tool-gemini-cli.md
